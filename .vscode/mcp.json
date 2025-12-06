@@ -1,0 +1,18 @@
+{
+  "servers": {
+    "extend-sdk-mcp-server": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "CONFIG_DIR",
+        "ghcr.io/accelbyte/ags-extend-sdk-mcp-server:2025.9.1"
+      ],
+      "env": {
+        "CONFIG_DIR": "config/go"
+      }
+    }
+  }
+}

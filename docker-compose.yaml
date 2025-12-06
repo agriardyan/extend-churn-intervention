@@ -1,0 +1,34 @@
+services:
+  redis:
+    image: redis:7.2-alpine3.20
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "6565:6565"
+      - "8080:8080"
+    environment:
+      - AB_CLIENT_ID=${AB_CLIENT_ID}
+      - AB_CLIENT_SECRET=${AB_CLIENT_SECRET}
+      - AB_BASE_URL=${AB_BASE_URL}
+      - AB_NAMESPACE=${AB_NAMESPACE}
+      - COMEBACK_BOOSTER_ITEM_ID=${COMEBACK_BOOSTER_ITEM_ID}
+      - SPEED_BOOSTER_ITEM_ID=${SPEED_BOOSTER_ITEM_ID}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://host.docker.internal:9411/api/v2/spans
+      - OTEL_SERVICE_NAME=ExtendAntiChurnHandler
+    depends_on:
+      redis:
+        condition: service_healthy
+    extra_hosts:
+      - host.docker.internal:host-gateway
