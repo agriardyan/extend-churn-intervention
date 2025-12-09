@@ -14,6 +14,10 @@ import (
 	"syscall"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/common"
+	pb_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
+	pb_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extends-anti-churn/pkg/state"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
@@ -98,20 +102,22 @@ func main() {
 	namespace := common.GetEnv("AB_NAMESPACE", "accelbyte")
 	logrus.Infof("using namespace: %s", namespace)
 
-	// Initialize Redis client (commented out for Phase 1, will enable in Phase 2)
-	// redisClient, err := state.InitRedisClient(ctx)
-	// if err != nil {
-	// 	logrus.Fatalf("failed to initialize Redis client: %v", err)
-	// }
-	// defer redisClient.Close()
-	// logrus.Infof("Redis client initialized")
+	// Initialize Redis client
+	redisClient, err := state.InitRedisClient(ctx)
+	if err != nil {
+		logrus.Fatalf("failed to initialize Redis client: %v", err)
+	}
+	defer redisClient.Close()
+	logrus.Infof("Redis client initialized")
 
-	// TODO: Register event handlers here in Phase 3
-	// loginHandler := service.NewLoginHandler(configRepo, tokenRepo, redisClient, namespace)
-	// pb.RegisterOauthTokenGeneratedServiceServer(s, loginHandler)
+	// Register event handlers
+	oauthHandler := service.NewOAuthHandler(redisClient, namespace)
+	pb_iam.RegisterOauthTokenOauthTokenGeneratedServiceServer(s, oauthHandler)
 
-	// statHandler := service.NewStatHandler(configRepo, tokenRepo, redisClient, namespace)
-	// pb.RegisterStatItemUpdatedServiceServer(s, statHandler)
+	statisticHandler := service.NewStatisticHandler(configRepo, tokenRepo, redisClient, namespace)
+	pb_social.RegisterStatisticStatItemUpdatedServiceServer(s, statisticHandler)
+
+	logrus.Infof("registered event handlers: OAuth and Statistic")
 
 	// Enable gRPC Reflection
 	reflection.Register(s)

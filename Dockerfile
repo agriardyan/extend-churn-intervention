@@ -3,65 +3,24 @@
 # and restrictions contact your company contract manager.
 
 # ----------------------------------------
+# Stage 0: Redis Binary Extraction
+# ----------------------------------------
+FROM redis:7-alpine AS redis-binary
+# We only need the redis-server and redis-cli binaries
+
+# ----------------------------------------
 # Stage 1: Protoc Code Generation
 # ----------------------------------------
-FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS proto-builder
+FROM golang:1.24-alpine AS proto-builder
 
-# Avoid warnings by switching to noninteractive
-ENV DEBIAN_FRONTEND=noninteractive
-
-ARG PROTOC_VERSION=21.9
-ARG GO_VERSION=1.24.10
-
-# Configure apt and install packages
-RUN apt-get update \
-    && apt-get -y install --no-install-recommends \
-    #
-    # Install essential development tools
-    build-essential \
+# Install build dependencies and protoc
+RUN apk add --no-cache \
+    bash \
     ca-certificates \
+    curl \
     git \
-    unzip \
-    wget \
-    #
-    # Detect architecture for downloads
-    && ARCH_SUFFIX=$(case "$(uname -m)" in \
-        x86_64) echo "x86_64" ;; \
-        aarch64) echo "aarch_64" ;; \
-        *) echo "x86_64" ;; \
-       esac) \
-    && GOARCH_SUFFIX=$(case "$(uname -m)" in \
-        x86_64) echo "amd64" ;; \
-        aarch64) echo "arm64" ;; \
-        *) echo "amd64" ;; \
-       esac) \
-    && OS_SUFFIX=$(case "${HOST_OS:-$(uname -s)}" in \
-        Linux) echo "linux" ;; \
-        Darwin) echo "darwin" ;; \
-        CYGWIN*|MINGW*|MSYS*) echo "windows" ;; \
-        *) echo "linux" ;; \
-        esac) \
-    #
-    # Install Protocol Buffers compiler
-    && wget -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${ARCH_SUFFIX}.zip \
-    && unzip protoc.zip -d /usr/local \
-    && rm protoc.zip \
-    && chmod +x /usr/local/bin/protoc \
-    #
-    # Install Go
-    && wget -O go.tar.gz https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH_SUFFIX}.tar.gz \
-    && tar -C /usr/local -xzf go.tar.gz \
-    && rm go.tar.gz \
-    #
-    # Clean up
-    && apt-get autoremove -y \
-    && apt-get clean -y \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set up Go environment
-ENV GOROOT=/usr/local/go
-ENV GOPATH=/go
-ENV PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+    protobuf \
+    protobuf-dev
 
 # Install protoc Go tools and plugins
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
@@ -83,10 +42,10 @@ RUN chmod +x proto.sh && \
 # ----------------------------------------
 # Stage 2: gRPC Server Builder
 # ----------------------------------------
-FROM --platform=$BUILDPLATFORM golang:1.24 AS builder
+FROM golang:1.24-alpine AS builder
 
-ARG TARGETOS
-ARG TARGETARCH
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
 
 ARG GOOS=$TARGETOS
 ARG GOARCH=$TARGETARCH
@@ -106,7 +65,7 @@ COPY . .
 COPY --from=proto-builder /build/pkg/pb pkg/pb
 
 # Build the Go application binary for the target OS and architecture
-RUN go build -v -modcacherw -o /output/$TARGETOS/$TARGETARCH/extends-anti-churn .
+RUN go build -v -modcacherw -o /output/extends-anti-churn .
 
 
 # ----------------------------------------
@@ -114,15 +73,31 @@ RUN go build -v -modcacherw -o /output/$TARGETOS/$TARGETARCH/extends-anti-churn 
 # ----------------------------------------
 FROM alpine:3.22
 
-# Set the value for the target OS and architecture.
-ARG TARGETOS
-ARG TARGETARCH
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    bash \
+    curl
 
 # Set working directory.
 WORKDIR /app
 
+# Copy Redis binaries from redis-binary stage
+COPY --from=redis-binary /usr/local/bin/redis-server /usr/local/bin/redis-server
+COPY --from=redis-binary /usr/local/bin/redis-cli /usr/local/bin/redis-cli
+
+# Create directories for Redis data and config
+RUN mkdir -p /data/redis /etc/redis
+
+# Copy Redis configuration
+COPY docker/redis.conf /etc/redis/redis.conf
+
+# Copy startup script
+COPY docker/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Copy build
-COPY --from=builder /output/$TARGETOS/$TARGETARCH/extends-anti-churn extends-anti-churn
+COPY --from=builder /output/extends-anti-churn /app/main
 
 # Plugin Arch gRPC Server Port.
 EXPOSE 6565
@@ -130,5 +105,5 @@ EXPOSE 6565
 # Prometheus /metrics Web Server Port.
 EXPOSE 8080
 
-# Entrypoint.
-CMD [ "/app/extends-anti-churn" ]
+# Entrypoint - use startup script instead of direct binary
+ENTRYPOINT ["/app/start.sh"]

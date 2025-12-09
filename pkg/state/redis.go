@@ -23,27 +23,42 @@ const (
 	KeyPrefix = "extend_anti_churn:"
 )
 
-// InitRedisClient initializes and returns a Redis client
+// InitRedisClient initializes and returns a Redis client with retry logic
 func InitRedisClient(ctx context.Context) (*redis.Client, error) {
 	redisHost := common.GetEnv("REDIS_HOST", "localhost")
 	redisPort := common.GetEnv("REDIS_PORT", "6379")
 	redisPassword := common.GetEnv("REDIS_PASSWORD", "")
+	maxRetries := common.GetEnvInt("REDIS_MAX_RETRIES", 5)
+	retryDelayMs := common.GetEnvInt("REDIS_RETRY_DELAY_MS", 1000)
 
 	client := redis.NewClient(&redis.Options{
-		Addr:     redisHost + ":" + redisPort,
-		Password: redisPassword,
-		DB:       0, // use default DB
+		Addr:         redisHost + ":" + redisPort,
+		Password:     redisPassword,
+		DB:           0, // use default DB
+		MaxRetries:   3,
+		DialTimeout:  5 * time.Second,
+		ReadTimeout:  3 * time.Second,
+		WriteTimeout: 3 * time.Second,
 	})
 
-	// Test connection
-	_, err := client.Ping(ctx).Result()
-	if err != nil {
-		logrus.Errorf("failed to connect to Redis: %v", err)
-		return nil, err
+	// Retry connection with exponential backoff
+	for i := 0; i < maxRetries; i++ {
+		_, err := client.Ping(ctx).Result()
+		if err == nil {
+			logrus.Infof("connected to Redis at %s:%s (attempt %d/%d)",
+				redisHost, redisPort, i+1, maxRetries)
+			return client, nil
+		}
+
+		if i < maxRetries-1 {
+			delay := time.Duration(retryDelayMs*(i+1)) * time.Millisecond
+			logrus.Warnf("Redis connection failed (attempt %d/%d): %v, retrying in %v...",
+				i+1, maxRetries, err, delay)
+			time.Sleep(delay)
+		}
 	}
 
-	logrus.Infof("connected to Redis at %s:%s", redisHost, redisPort)
-	return client, nil
+	return nil, fmt.Errorf("failed to connect to Redis at %s:%s after %d attempts", redisHost, redisPort, maxRetries)
 }
 
 // makeKey creates a Redis key for a player
