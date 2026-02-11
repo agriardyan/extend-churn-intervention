@@ -16,29 +16,29 @@ func CheckWeeklyReset(state *ChurnState, now time.Time) bool {
 	// Calculate time since last reset
 	timeSinceReset := now.Sub(state.Sessions.LastReset)
 
-	// Check if a week has passed (7 days)
-	if timeSinceReset >= 7*24*time.Hour {
-		logrus.Debugf("weekly reset triggered: %v since last reset", timeSinceReset)
-
-		// Move thisWeek to lastWeek
-		state.Sessions.LastWeek = state.Sessions.ThisWeek
-
-		// Reset thisWeek counter
-		state.Sessions.ThisWeek = 0
-
-		// Update last reset time
-		state.Sessions.LastReset = now
-
-		// If there's an active challenge that hasn't expired, cancel it on weekly reset
-		if state.Challenge.Active && now.Before(state.Challenge.ExpiresAt) {
-			logrus.Debugf("canceling active challenge due to weekly reset")
-			state.Challenge.Active = false
-		}
-
-		return true
+	// Check if a week hasn't passed (7 days)
+	if timeSinceReset < 7*24*time.Hour {
+		return false
 	}
 
-	return false
+	logrus.Infof("weekly reset triggered: %v since last reset", timeSinceReset)
+
+	// Move thisWeek to lastWeek
+	state.Sessions.LastWeek = state.Sessions.ThisWeek
+
+	// Reset thisWeek counter
+	state.Sessions.ThisWeek = 0
+
+	// Update last reset time
+	state.Sessions.LastReset = now
+
+	// If there's an active challenge that hasn't expired, cancel it on weekly reset
+	if state.Challenge.Active && now.Before(state.Challenge.ExpiresAt) {
+		logrus.Infof("canceling active challenge due to weekly reset")
+		state.Challenge.Active = false
+	}
+
+	return true
 }
 
 // CanTriggerIntervention checks if an intervention can be triggered based on cooldown
@@ -51,12 +51,12 @@ func CanTriggerIntervention(state *ChurnState, now time.Time) bool {
 
 	// Check if current time is past the cooldown
 	if now.After(state.Intervention.CooldownUntil) {
-		logrus.Debugf("intervention cooldown has expired")
+		logrus.Infof("intervention cooldown has expired")
 		return true
 	}
 
 	timeUntilCooldown := state.Intervention.CooldownUntil.Sub(now)
-	logrus.Debugf("intervention still in cooldown for %v", timeUntilCooldown)
+	logrus.Infof("intervention still in cooldown for %v", timeUntilCooldown)
 	return false
 }
 
@@ -66,7 +66,7 @@ func SetInterventionCooldown(state *ChurnState, now time.Time, cooldownDuration 
 	state.Intervention.CooldownUntil = now.Add(cooldownDuration)
 	state.Intervention.TotalTriggered++
 
-	logrus.Debugf("intervention cooldown set until %v (duration: %v)",
+	logrus.Infof("intervention cooldown set until %v (duration: %v)",
 		state.Intervention.CooldownUntil, cooldownDuration)
 }
 
@@ -87,7 +87,7 @@ func IsChurning(state *ChurnState, now time.Time) bool {
 	isChurning := state.Sessions.LastWeek > 0 && state.Sessions.ThisWeek == 0
 
 	if isChurning {
-		logrus.Debugf("player is churning: lastWeek=%d, thisWeek=%d, timeSinceReset=%v",
+		logrus.Infof("player is churning: lastWeek=%d, thisWeek=%d, timeSinceReset=%v",
 			state.Sessions.LastWeek, state.Sessions.ThisWeek, timeSinceReset)
 	}
 
@@ -107,17 +107,17 @@ func ShouldTriggerIntervention(state *ChurnState, now time.Time) bool {
 
 	// Don't trigger if there's already an active challenge
 	if state.Challenge.Active {
-		logrus.Debugf("intervention not triggered: challenge already active")
+		logrus.Infof("intervention not triggered: challenge already active")
 		return false
 	}
 
 	// Check cooldown
 	if !CanTriggerIntervention(state, now) {
-		logrus.Debugf("intervention not triggered: still in cooldown")
+		logrus.Infof("intervention not triggered: still in cooldown")
 		return false
 	}
 
-	logrus.Debugf("intervention should be triggered")
+	logrus.Infof("intervention should be triggered")
 	return true
 }
 
@@ -157,7 +157,7 @@ func UpdateChallengeProgress(state *ChurnState, newWinCount int, now time.Time) 
 
 	state.Challenge.WinsCurrent = winsSinceStart
 
-	logrus.Debugf("challenge progress: %d/%d wins", state.Challenge.WinsCurrent, state.Challenge.WinsNeeded)
+	logrus.Infof("challenge progress: %d/%d wins", state.Challenge.WinsCurrent, state.Challenge.WinsNeeded)
 
 	// Check if challenge is completed
 	if state.Challenge.WinsCurrent >= state.Challenge.WinsNeeded {
@@ -168,4 +168,17 @@ func UpdateChallengeProgress(state *ChurnState, newWinCount int, now time.Time) 
 	}
 
 	return false
+}
+
+// ResetChallenge clears all challenge data from state
+// Call this after a challenge is completed to clean up cached data in Redis
+func ResetChallenge(state *ChurnState) {
+	state.Challenge.Active = false
+	state.Challenge.WinsNeeded = 0
+	state.Challenge.WinsCurrent = 0
+	state.Challenge.WinsAtStart = 0
+	state.Challenge.ExpiresAt = time.Time{}
+	state.Challenge.TriggerReason = ""
+
+	logrus.Infof("challenge data reset")
 }

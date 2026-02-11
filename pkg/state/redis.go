@@ -20,7 +20,7 @@ const (
 	// DefaultTTL is the default TTL for player state in Redis (30 days)
 	DefaultTTL = 30 * 24 * time.Hour
 	// KeyPrefix is the prefix for all churn state keys
-	KeyPrefix = "extend_anti_churn:"
+	KeyPrefix = "churn_intervention:user_state:"
 )
 
 // InitRedisClient initializes and returns a Redis client with retry logic
@@ -73,7 +73,7 @@ func GetChurnState(ctx context.Context, client *redis.Client, userID string) (*C
 	data, err := client.Get(ctx, key).Result()
 	if err == redis.Nil {
 		// Player doesn't exist, return new state
-		logrus.Debugf("no existing state for user %s, returning new state", userID)
+		logrus.Infof("no existing state for user %s, returning new state", userID)
 		return &ChurnState{
 			Sessions: SessionState{
 				ThisWeek:  0,
@@ -99,7 +99,7 @@ func GetChurnState(ctx context.Context, client *redis.Client, userID string) (*C
 		return nil, fmt.Errorf("failed to unmarshal state: %w", err)
 	}
 
-	logrus.Debugf("retrieved state for user %s", userID)
+	logrus.Infof("retrieved state for user %s", userID)
 	return &state, nil
 }
 
@@ -118,7 +118,7 @@ func UpdateChurnState(ctx context.Context, client *redis.Client, userID string, 
 		return fmt.Errorf("failed to set state: %w", err)
 	}
 
-	logrus.Debugf("updated state for user %s with TTL %v", userID, DefaultTTL)
+	logrus.Infof("updated state for user %s with TTL %v", userID, DefaultTTL)
 	return nil
 }
 
@@ -131,6 +131,6 @@ func DeleteChurnState(ctx context.Context, client *redis.Client, userID string) 
 		return fmt.Errorf("failed to delete state: %w", err)
 	}
 
-	logrus.Debugf("deleted state for user %s", userID)
+	logrus.Infof("deleted state for user %s", userID)
 	return nil
 }

@@ -1,4 +1,4 @@
-# Extend Anti-Churn Handler
+# Extend Anti-Churn Event Handler
 
 Automated churn detection and intervention system for Ready, Set, Enter! game on AccelByte Gaming Services.
 

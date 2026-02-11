@@ -14,9 +14,9 @@ import (
 	"syscall"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/common"
+	"github.com/AccelByte/extends-anti-churn/pkg/handler"
 	pb_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
 	pb_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
@@ -110,14 +110,14 @@ func main() {
 	defer redisClient.Close()
 	logrus.Infof("Redis client initialized")
 
-	// Register event handlers
-	oauthHandler := service.NewOAuthHandler(redisClient, namespace)
-	pb_iam.RegisterOauthTokenOauthTokenGeneratedServiceServer(s, oauthHandler)
+	// Register event listeners
+	oauthListener := handler.NewOAuth(redisClient, namespace)
+	pb_iam.RegisterOauthTokenOauthTokenGeneratedServiceServer(s, oauthListener)
 
-	statisticHandler := service.NewStatisticHandler(configRepo, tokenRepo, redisClient, namespace)
-	pb_social.RegisterStatisticStatItemUpdatedServiceServer(s, statisticHandler)
+	statisticListener := handler.NewStatistic(configRepo, tokenRepo, redisClient, namespace)
+	pb_social.RegisterStatisticStatItemUpdatedServiceServer(s, statisticListener)
 
-	logrus.Infof("registered event handlers: OAuth and Statistic")
+	logrus.Infof("registered event listeners: OAuth and Statistic")
 
 	// Enable gRPC Reflection
 	reflection.Register(s)

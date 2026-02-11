@@ -3,12 +3,6 @@
 # and restrictions contact your company contract manager.
 
 # ----------------------------------------
-# Stage 0: Redis Binary Extraction
-# ----------------------------------------
-FROM redis:7-alpine AS redis-binary
-# We only need the redis-server and redis-cli binaries
-
-# ----------------------------------------
 # Stage 1: Protoc Code Generation
 # ----------------------------------------
 FROM golang:1.24-alpine AS proto-builder
@@ -81,16 +75,6 @@ RUN apk add --no-cache \
 
 # Set working directory.
 WORKDIR /app
-
-# Copy Redis binaries from redis-binary stage
-COPY --from=redis-binary /usr/local/bin/redis-server /usr/local/bin/redis-server
-COPY --from=redis-binary /usr/local/bin/redis-cli /usr/local/bin/redis-cli
-
-# Create directories for Redis data and config
-RUN mkdir -p /data/redis /etc/redis
-
-# Copy Redis configuration
-COPY docker/redis.conf /etc/redis/redis.conf
 
 # Copy startup script
 COPY docker/start.sh /app/start.sh
