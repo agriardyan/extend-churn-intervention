@@ -43,7 +43,7 @@ func (r *SessionDeclineRule) Name() string {
 
 // SignalTypes returns the signal types this rule handles.
 func (r *SessionDeclineRule) SignalTypes() []string {
-	return []string{signalBuiltin.TypeLogin}
+	return []string{signalBuiltin.TypeOauthTokenGenerated}
 }
 
 // Config returns the rule configuration.

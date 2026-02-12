@@ -15,10 +15,10 @@ func TestLoginSignal(t *testing.T) {
 		State:  &state.ChurnState{},
 	}
 
-	sig := NewLoginSignal("user123", timestamp, playerCtx)
+	sig := NewOauthTokenGeneratedSignal("user123", timestamp, playerCtx)
 
-	if sig.Type() != TypeLogin {
-		t.Errorf("Expected type '%s', got '%s'", TypeLogin, sig.Type())
+	if sig.Type() != TypeOauthTokenGenerated {
+		t.Errorf("Expected type '%s', got '%s'", TypeOauthTokenGenerated, sig.Type())
 	}
 
 	if sig.UserID() != "user123" {

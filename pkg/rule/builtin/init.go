@@ -4,8 +4,8 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 )
 
-// init registers all built-in rule types with the factory
-func init() {
+// RegisterBuiltinRules registers all built-in rule types with the factory.
+func RegisterBuiltinRules() {
 	rule.RegisterRuleType(RageQuitRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
 		return NewRageQuitRule(config), nil
 	})

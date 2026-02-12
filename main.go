@@ -22,6 +22,7 @@ import (
 	pb_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
 	signalPkg "github.com/AccelByte/extends-anti-churn/pkg/signal"
 	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
@@ -45,8 +46,6 @@ import (
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
-
-	_ "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin" // Import to register built-in rules
 )
 
 const (
@@ -149,6 +148,13 @@ func main() {
 	signalBuiltin.RegisterBuiltinMappers(processor.GetMapperRegistry())
 	logrus.Infof("initialized signal processor with %d mappers", processor.GetMapperRegistry().Count())
 
+	// Register built-in event processors
+	signalBuiltin.RegisterBuiltinEventProcessors(
+		processor.GetEventProcessorRegistry(),
+		processor.GetMapperRegistry(),
+	)
+	logrus.Infof("initialized signal processor with %d event processors", processor.GetEventProcessorRegistry().Count())
+
 	// Convert pipeline rule configs to rule package configs
 	ruleConfigs := make([]rule.RuleConfig, len(pipelineConfig.Rules))
 	for i, rc := range pipelineConfig.Rules {
@@ -173,6 +179,9 @@ func main() {
 			}
 		}
 	}
+
+	// Register built-in rule types
+	ruleBuiltin.RegisterBuiltinRules()
 
 	// Initialize rule registry and register built-in rules
 	ruleRegistry := rule.NewRegistry()

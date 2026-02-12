@@ -103,7 +103,7 @@ func TestRageQuitRule_WrongSignalType(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	matched, trigger, err := rule.Evaluate(context.Background(), sig)
 	if err == nil {
@@ -290,7 +290,7 @@ func TestSessionDeclineRule_Evaluate(t *testing.T) {
 				UserID: "test-user",
 				State:  playerState,
 			}
-			sig := signalBuiltin.NewLoginSignal("test-user", now, playerCtx)
+			sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", now, playerCtx)
 
 			matched, trigger, err := rule.Evaluate(context.Background(), sig)
 			if err != nil {
@@ -328,7 +328,7 @@ func TestSessionDeclineRule_NoPlayerContext(t *testing.T) {
 	rule := NewSessionDeclineRule(config)
 
 	// Create signal without player context
-	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), nil)
+	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), nil)
 
 	matched, trigger, err := rule.Evaluate(context.Background(), sig)
 	if err != nil {

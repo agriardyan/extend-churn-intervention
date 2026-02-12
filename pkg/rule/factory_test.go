@@ -4,8 +4,13 @@ import (
 	"testing"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	_ "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin" // Import to register built-in rules
+	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
 )
+
+func init() {
+	// Register builtin rules for all tests
+	ruleBuiltin.RegisterBuiltinRules()
+}
 
 const (
 	// Rule type constants for testing

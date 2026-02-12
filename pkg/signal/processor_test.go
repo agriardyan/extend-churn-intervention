@@ -45,9 +45,14 @@ func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, ch
 	return nil
 }
 
-// setupTestProcessor creates a processor with builtin mappers registered
-func setupTestProcessor() *Processor {
-	store := newMockStateStore()
+// setupTestProcessor creates a processor with builtin mappers and event processors registered
+func setupTestProcessor(stores ...StateStore) *Processor {
+	var store StateStore
+	if len(stores) > 0 {
+		store = stores[0]
+	} else {
+		store = newMockStateStore()
+	}
 	processor := NewProcessor(store, "test-namespace")
 
 	// Register test mappers inline
@@ -55,7 +60,93 @@ func setupTestProcessor() *Processor {
 	processor.GetMapperRegistry().Register(&testMatchWinMapper{})
 	processor.GetMapperRegistry().Register(&testLosingStreakMapper{})
 
+	// Register test event processors inline
+	processor.GetEventProcessorRegistry().Register(&testOAuthEventProcessor{})
+	processor.GetEventProcessorRegistry().Register(&testStatEventProcessor{
+		mapperRegistry: processor.GetMapperRegistry(),
+	})
+
 	return processor
+}
+
+// Test event processor implementations
+type testOAuthEventProcessor struct{}
+
+func (p *testOAuthEventProcessor) EventType() string {
+	return "oauth_token_generated"
+}
+
+func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}, contextLoader ContextLoader) (Signal, error) {
+	oauthEvent, ok := event.(*oauth.OauthTokenGenerated)
+	if !ok {
+		return nil, fmt.Errorf("expected *oauth.OauthTokenGenerated, got %T", event)
+	}
+
+	userID := oauthEvent.GetUserId()
+	if userID == "" {
+		return nil, fmt.Errorf("user ID is empty")
+	}
+
+	playerCtx, err := contextLoader.LoadPlayerContext(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := map[string]interface{}{
+		"event": "oauth_token_generated",
+	}
+	return &BaseSignal{
+		signalType: "login",
+		userID:     userID,
+		timestamp:  time.Now(),
+		metadata:   metadata,
+		context:    playerCtx,
+	}, nil
+}
+
+type testStatEventProcessor struct {
+	mapperRegistry *MapperRegistry
+}
+
+func (p *testStatEventProcessor) EventType() string {
+	return "stat_item_updated"
+}
+
+func (p *testStatEventProcessor) Process(ctx context.Context, event interface{}, contextLoader ContextLoader) (Signal, error) {
+	statEvent, ok := event.(*statistic.StatItemUpdated)
+	if !ok {
+		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
+	}
+
+	payload := statEvent.GetPayload()
+	if payload == nil {
+		return nil, fmt.Errorf("stat event payload is nil")
+	}
+
+	userID := statEvent.GetUserId()
+	statCode := payload.GetStatCode()
+	value := payload.GetLatestValue()
+
+	if userID == "" {
+		return nil, fmt.Errorf("user ID is empty")
+	}
+	if statCode == "" {
+		return nil, fmt.Errorf("stat code is empty")
+	}
+
+	playerCtx, err := contextLoader.LoadPlayerContext(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	timestamp := time.Now()
+
+	mapper := p.mapperRegistry.Get(statCode)
+	if mapper != nil {
+		return mapper.MapToSignal(userID, timestamp, value, playerCtx), nil
+	}
+
+	return NewStatUpdateSignal(userID, timestamp, statCode, value, playerCtx), nil
 }
 
 // Test mapper implementations - use generic signals to avoid circular dependencies
@@ -138,7 +229,7 @@ func TestNewProcessor(t *testing.T) {
 
 func TestProcessor_ProcessOAuthEvent(t *testing.T) {
 	store := newMockStateStore()
-	processor := NewProcessor(store, "test-namespace")
+	processor := setupTestProcessor(store)
 
 	// Create event using the proper structure
 	event := &oauth.OauthTokenGenerated{}
@@ -271,7 +362,7 @@ func TestProcessor_ProcessStatEvent_LosingStreak(t *testing.T) {
 
 func TestProcessor_ProcessStatEvent_UnknownStatCode(t *testing.T) {
 	store := newMockStateStore()
-	processor := NewProcessor(store, "test-namespace")
+	processor := setupTestProcessor(store)
 
 	event := &statistic.StatItemUpdated{
 		UserId: "test-user-999",

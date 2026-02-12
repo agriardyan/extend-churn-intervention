@@ -10,9 +10,24 @@ import (
 	asyncapi_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
 )
+
+// setupTestProcessor creates a processor with builtin event processors and mappers registered
+func setupTestProcessor(stateStore signal.StateStore) *signal.Processor {
+	processor := signal.NewProcessor(stateStore, "test-namespace")
+
+	// Register builtin mappers and event processors
+	signalBuiltin.RegisterBuiltinMappers(processor.GetMapperRegistry())
+	signalBuiltin.RegisterBuiltinEventProcessors(
+		processor.GetEventProcessorRegistry(),
+		processor.GetMapperRegistry(),
+	)
+
+	return processor
+}
 
 // TestIntegration_PipelineWiring tests that all pipeline components work together
 func TestIntegration_PipelineWiring(t *testing.T) {
@@ -33,7 +48,7 @@ func TestIntegration_PipelineWiring(t *testing.T) {
 	store := signal.NewRedisStateStore(client)
 
 	// Create signal processor
-	processor := signal.NewProcessor(store, "test-namespace")
+	processor := setupTestProcessor(store)
 
 	// Create rule registry
 	registry := rule.NewRegistry()

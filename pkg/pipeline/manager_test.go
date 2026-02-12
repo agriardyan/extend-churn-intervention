@@ -11,6 +11,7 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
@@ -109,9 +110,23 @@ func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, st
 	return nil
 }
 
+// setupTestProcessor creates a processor with builtin event processors and mappers registered
+func setupTestProcessor(stateStore signal.StateStore) *signal.Processor {
+	processor := signal.NewProcessor(stateStore, "test")
+
+	// Register builtin mappers and event processors
+	signalBuiltin.RegisterBuiltinMappers(processor.GetMapperRegistry())
+	signalBuiltin.RegisterBuiltinEventProcessors(
+		processor.GetEventProcessorRegistry(),
+		processor.GetMapperRegistry(),
+	)
+
+	return processor
+}
+
 func TestNewManager(t *testing.T) {
 	stateStore := &mockStateStore{}
-	processor := signal.NewProcessor(stateStore, "test")
+	processor := setupTestProcessor(stateStore)
 
 	ruleRegistry := rule.NewRegistry()
 	engine := rule.NewEngine(ruleRegistry)
@@ -129,7 +144,7 @@ func TestNewManager(t *testing.T) {
 func TestProcessOAuthEvent_NoSignal(t *testing.T) {
 	ctx := context.Background()
 	stateStore := &mockStateStore{}
-	processor := signal.NewProcessor(stateStore, "test")
+	processor := setupTestProcessor(stateStore)
 
 	ruleRegistry := rule.NewRegistry()
 	engine := rule.NewEngine(ruleRegistry)
@@ -164,9 +179,8 @@ func TestProcessOAuthEvent_WithRuleTrigger(t *testing.T) {
 			},
 		},
 	}
-	processor := signal.NewProcessor(stateStore, "test")
+	processor := setupTestProcessor(stateStore)
 
-	// Setup rule that will match
 	mockRule := &mockRule{
 		id:          "test-rule",
 		shouldMatch: true,
@@ -207,7 +221,7 @@ func TestProcessStatEvent_RageQuit(t *testing.T) {
 	stateStore := &mockStateStore{
 		state: &state.ChurnState{},
 	}
-	processor := signal.NewProcessor(stateStore, "test")
+	processor := setupTestProcessor(stateStore)
 
 	// Setup rule that will match rage quit
 	mockRule := &mockRule{
@@ -251,7 +265,7 @@ func TestProcessStatEvent_NoRuleTrigger(t *testing.T) {
 	ctx := context.Background()
 
 	stateStore := &mockStateStore{}
-	processor := signal.NewProcessor(stateStore, "test")
+	processor := setupTestProcessor(stateStore)
 
 	// Setup rule that won't match
 	mockRule := &mockRule{
@@ -289,7 +303,7 @@ func TestProcessStatEvent_MultipleActions(t *testing.T) {
 	stateStore := &mockStateStore{
 		state: &state.ChurnState{},
 	}
-	processor := signal.NewProcessor(stateStore, "test")
+	processor := setupTestProcessor(stateStore)
 
 	// Setup rule with multiple actions
 	mockRule := &mockRule{
@@ -334,7 +348,7 @@ func TestProcessStatEvent_ActionFailure(t *testing.T) {
 	stateStore := &mockStateStore{
 		state: &state.ChurnState{},
 	}
-	processor := signal.NewProcessor(stateStore, "test")
+	processor := setupTestProcessor(stateStore)
 
 	mockRule := &mockRule{
 		id:          "failing-action-rule",
@@ -376,7 +390,7 @@ func TestProcessStatEvent_ActionFailure(t *testing.T) {
 
 func TestGetStats(t *testing.T) {
 	stateStore := &mockStateStore{}
-	processor := signal.NewProcessor(stateStore, "test")
+	processor := setupTestProcessor(stateStore)
 
 	ruleRegistry := rule.NewRegistry()
 	engine := rule.NewEngine(ruleRegistry)

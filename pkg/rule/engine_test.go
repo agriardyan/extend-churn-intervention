@@ -69,7 +69,7 @@ func TestEngine_Evaluate_NoRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -100,7 +100,7 @@ func TestEngine_Evaluate_SingleMatchingRule(t *testing.T) {
 	rule := &testRule{
 		id:          "test_rule",
 		name:        "Test Rule",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "test_rule", Enabled: true, Priority: 10},
 		shouldMatch: true,
 	}
@@ -112,7 +112,7 @@ func TestEngine_Evaluate_SingleMatchingRule(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -138,21 +138,21 @@ func TestEngine_Evaluate_MultipleMatchingRules(t *testing.T) {
 	rule1 := &testRule{
 		id:          "rule1",
 		name:        "Rule 1",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "rule1", Enabled: true, Priority: 10},
 		shouldMatch: true,
 	}
 	rule2 := &testRule{
 		id:          "rule2",
 		name:        "Rule 2",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "rule2", Enabled: true, Priority: 20},
 		shouldMatch: true,
 	}
 	rule3 := &testRule{
 		id:          "rule3",
 		name:        "Rule 3",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "rule3", Enabled: true, Priority: 5},
 		shouldMatch: true,
 	}
@@ -167,7 +167,7 @@ func TestEngine_Evaluate_MultipleMatchingRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -196,7 +196,7 @@ func TestEngine_Evaluate_NoMatchingRules(t *testing.T) {
 	rule := &testRule{
 		id:          "test_rule",
 		name:        "Test Rule",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "test_rule", Enabled: true, Priority: 10},
 		shouldMatch: false, // Won't match
 	}
@@ -208,7 +208,7 @@ func TestEngine_Evaluate_NoMatchingRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -226,7 +226,7 @@ func TestEngine_Evaluate_RuleError(t *testing.T) {
 	rule := &testRule{
 		id:          "error_rule",
 		name:        "Error Rule",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "error_rule", Enabled: true, Priority: 10},
 		shouldError: true,
 	}
@@ -238,7 +238,7 @@ func TestEngine_Evaluate_RuleError(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	// Engine should not return error, but log it and continue
@@ -258,21 +258,21 @@ func TestEngine_Evaluate_MixedResults(t *testing.T) {
 	matchingRule := &testRule{
 		id:          "matching_rule",
 		name:        "Matching Rule",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "matching_rule", Enabled: true, Priority: 10},
 		shouldMatch: true,
 	}
 	nonMatchingRule := &testRule{
 		id:          "non_matching_rule",
 		name:        "Non Matching Rule",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "non_matching_rule", Enabled: true, Priority: 5},
 		shouldMatch: false,
 	}
 	errorRule := &testRule{
 		id:          "error_rule",
 		name:        "Error Rule",
-		signalTypes: []string{"login"},
+		signalTypes: []string{"oauth_token_generated"},
 		config:      RuleConfig{ID: "error_rule", Enabled: true, Priority: 15},
 		shouldError: true,
 	}
@@ -287,7 +287,7 @@ func TestEngine_Evaluate_MixedResults(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -310,7 +310,7 @@ func TestEngine_EvaluateMultiple(t *testing.T) {
 	rule := &testRule{
 		id:          "test_rule",
 		name:        "Test Rule",
-		signalTypes: []string{"login", "match_win"},
+		signalTypes: []string{"oauth_token_generated", "match_win"},
 		config:      RuleConfig{ID: "test_rule", Enabled: true, Priority: 10},
 		shouldMatch: true,
 	}
@@ -324,7 +324,7 @@ func TestEngine_EvaluateMultiple(t *testing.T) {
 	}
 
 	signals := []signal.Signal{
-		signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx),
+		signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx),
 		signalBuiltin.NewWinSignal("test-user", time.Now(), 5, playerCtx),
 	}
 
