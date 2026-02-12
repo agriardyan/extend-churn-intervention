@@ -6,6 +6,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +49,7 @@ func (r *LosingStreakRule) Name() string {
 
 // SignalTypes returns the signal types this rule handles.
 func (r *LosingStreakRule) SignalTypes() []string {
-	return []string{signal.TypeLoss}
+	return []string{signalBuiltin.TypeLosingStreak}
 }
 
 // Config returns the rule configuration.
@@ -59,7 +60,7 @@ func (r *LosingStreakRule) Config() rule.RuleConfig {
 // Evaluate checks if the player has reached the losing streak threshold.
 func (r *LosingStreakRule) Evaluate(ctx context.Context, sig signal.Signal) (bool, *rule.Trigger, error) {
 	// Type assert to LossSignal
-	lossSig, ok := sig.(*signal.LossSignal)
+	lossSig, ok := sig.(*signalBuiltin.LossSignal)
 	if !ok {
 		return false, nil, fmt.Errorf("expected LossSignal, got %T", sig)
 	}

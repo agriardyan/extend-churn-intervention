@@ -18,7 +18,7 @@ rules:
   - id: losing-streak
     type: losing_streak
     enabled: true
-    actions: [comeback-challenge, grant-item]  # Same actions as rage quit
+    actions: [comeback-challenge]  # Same actions as rage quit
     parameters:
       threshold: 5  # Number of consecutive losses
     cooldown:

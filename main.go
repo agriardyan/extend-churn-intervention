@@ -23,6 +23,7 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	signalPkg "github.com/AccelByte/extends-anti-churn/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
@@ -143,7 +144,10 @@ func main() {
 	// Initialize signal processor with Redis state store
 	stateStore := signalPkg.NewRedisStateStore(redisClient)
 	processor := signalPkg.NewProcessor(stateStore, namespace)
-	logrus.Infof("initialized signal processor")
+
+	// Register built-in signal mappers
+	signalBuiltin.RegisterBuiltinMappers(processor.GetMapperRegistry())
+	logrus.Infof("initialized signal processor with %d mappers", processor.GetMapperRegistry().Count())
 
 	// Convert pipeline rule configs to rule package configs
 	ruleConfigs := make([]rule.RuleConfig, len(pipelineConfig.Rules))

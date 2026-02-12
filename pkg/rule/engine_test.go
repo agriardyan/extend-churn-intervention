@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
@@ -68,7 +69,7 @@ func TestEngine_Evaluate_NoRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signal.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -111,7 +112,7 @@ func TestEngine_Evaluate_SingleMatchingRule(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signal.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -166,7 +167,7 @@ func TestEngine_Evaluate_MultipleMatchingRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signal.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -207,7 +208,7 @@ func TestEngine_Evaluate_NoMatchingRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signal.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -237,7 +238,7 @@ func TestEngine_Evaluate_RuleError(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signal.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	// Engine should not return error, but log it and continue
@@ -286,7 +287,7 @@ func TestEngine_Evaluate_MixedResults(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signal.NewLoginSignal("test-user", time.Now(), playerCtx)
+	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -309,7 +310,7 @@ func TestEngine_EvaluateMultiple(t *testing.T) {
 	rule := &testRule{
 		id:          "test_rule",
 		name:        "Test Rule",
-		signalTypes: []string{"login", "win"},
+		signalTypes: []string{"login", "match_win"},
 		config:      RuleConfig{ID: "test_rule", Enabled: true, Priority: 10},
 		shouldMatch: true,
 	}
@@ -323,8 +324,8 @@ func TestEngine_EvaluateMultiple(t *testing.T) {
 	}
 
 	signals := []signal.Signal{
-		signal.NewLoginSignal("test-user", time.Now(), playerCtx),
-		signal.NewWinSignal("test-user", time.Now(), 5, playerCtx),
+		signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx),
+		signalBuiltin.NewWinSignal("test-user", time.Now(), 5, playerCtx),
 	}
 
 	triggers, err := engine.EvaluateMultiple(context.Background(), signals)

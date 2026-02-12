@@ -6,7 +6,6 @@ import "time"
 // This is typically loaded from YAML configuration files.
 type ActionConfig struct {
 	ID         string                 `yaml:"id" json:"id"`
-	Name       string                 `yaml:"name" json:"name"`
 	Type       string                 `yaml:"type" json:"type"` // e.g., "builtin.create_challenge"
 	Enabled    bool                   `yaml:"enabled" json:"enabled"`
 	Async      bool                   `yaml:"async" json:"async"`

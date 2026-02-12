@@ -45,6 +45,80 @@ func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, ch
 	return nil
 }
 
+// setupTestProcessor creates a processor with builtin mappers registered
+func setupTestProcessor() *Processor {
+	store := newMockStateStore()
+	processor := NewProcessor(store, "test-namespace")
+
+	// Register test mappers inline
+	processor.GetMapperRegistry().Register(&testRageQuitMapper{})
+	processor.GetMapperRegistry().Register(&testMatchWinMapper{})
+	processor.GetMapperRegistry().Register(&testLosingStreakMapper{})
+
+	return processor
+}
+
+// Test mapper implementations - use generic signals to avoid circular dependencies
+type testRageQuitMapper struct{}
+
+func (m *testRageQuitMapper) StatCode() string {
+	return "rse-rage-quit"
+}
+
+func (m *testRageQuitMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *PlayerContext) Signal {
+	metadata := map[string]interface{}{
+		"quit_count": int(value),
+		"stat_code":  "rse-rage-quit",
+	}
+	return &BaseSignal{
+		signalType: "rage_quit",
+		userID:     userID,
+		timestamp:  timestamp,
+		metadata:   metadata,
+		context:    context,
+	}
+}
+
+type testMatchWinMapper struct{}
+
+func (m *testMatchWinMapper) StatCode() string {
+	return "rse-match-wins"
+}
+
+func (m *testMatchWinMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *PlayerContext) Signal {
+	metadata := map[string]interface{}{
+		"total_wins": int(value),
+		"stat_code":  "rse-match-wins",
+	}
+	return &BaseSignal{
+		signalType: "match_win",
+		userID:     userID,
+		timestamp:  timestamp,
+		metadata:   metadata,
+		context:    context,
+	}
+}
+
+type testLosingStreakMapper struct{}
+
+func (m *testLosingStreakMapper) StatCode() string {
+	return "rse-current-losing-streak"
+}
+
+func (m *testLosingStreakMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *PlayerContext) Signal {
+	metadata := map[string]interface{}{
+		"current_streak": int(value),
+		"stat_code":      "rse-current-losing-streak",
+	}
+	return &BaseSignal{
+		signalType: "losing_streak",
+		userID:     userID,
+		timestamp:  timestamp,
+		metadata:   metadata,
+		context:    context,
+	}
+}
+
 func TestNewProcessor(t *testing.T) {
 	store := newMockStateStore()
 	processor := NewProcessor(store, "test-namespace")
@@ -80,8 +154,8 @@ func TestProcessor_ProcessOAuthEvent(t *testing.T) {
 		t.Fatal("Expected non-nil signal")
 	}
 
-	if signal.Type() != TypeLogin {
-		t.Errorf("Expected signal type '%s', got '%s'", TypeLogin, signal.Type())
+	if signal.Type() != "login" {
+		t.Errorf("Expected signal type 'login', got '%s'", signal.Type())
 	}
 
 	if signal.UserID() != "test-user-123" {
@@ -121,8 +195,7 @@ func TestProcessor_ProcessOAuthEvent_EmptyUserID(t *testing.T) {
 }
 
 func TestProcessor_ProcessStatEvent_RageQuit(t *testing.T) {
-	store := newMockStateStore()
-	processor := NewProcessor(store, "test-namespace")
+	processor := setupTestProcessor()
 
 	event := &statistic.StatItemUpdated{
 		UserId: "test-user-123",
@@ -137,23 +210,17 @@ func TestProcessor_ProcessStatEvent_RageQuit(t *testing.T) {
 		t.Fatalf("Failed to process stat event: %v", err)
 	}
 
-	if signal.Type() != TypeRageQuit {
-		t.Errorf("Expected signal type '%s', got '%s'", TypeRageQuit, signal.Type())
+	if signal.Type() != "rage_quit" {
+		t.Errorf("Expected signal type 'rage_quit', got '%s'", signal.Type())
 	}
 
-	rageQuitSignal, ok := signal.(*RageQuitSignal)
-	if !ok {
-		t.Fatal("Expected RageQuitSignal")
-	}
-
-	if rageQuitSignal.QuitCount != 5 {
-		t.Errorf("Expected quit count 5, got %d", rageQuitSignal.QuitCount)
+	if signal.Metadata()["quit_count"] != 5 {
+		t.Errorf("Expected quit_count=5 in metadata")
 	}
 }
 
 func TestProcessor_ProcessStatEvent_MatchWins(t *testing.T) {
-	store := newMockStateStore()
-	processor := NewProcessor(store, "test-namespace")
+	processor := setupTestProcessor()
 
 	event := &statistic.StatItemUpdated{
 		UserId: "test-user-456",
@@ -168,23 +235,17 @@ func TestProcessor_ProcessStatEvent_MatchWins(t *testing.T) {
 		t.Fatalf("Failed to process stat event: %v", err)
 	}
 
-	if signal.Type() != TypeWin {
-		t.Errorf("Expected signal type '%s', got '%s'", TypeWin, signal.Type())
+	if signal.Type() != "match_win" {
+		t.Errorf("Expected signal type 'match_win', got '%s'", signal.Type())
 	}
 
-	winSignal, ok := signal.(*WinSignal)
-	if !ok {
-		t.Fatal("Expected WinSignal")
-	}
-
-	if winSignal.TotalWins != 42 {
-		t.Errorf("Expected total wins 42, got %d", winSignal.TotalWins)
+	if signal.Metadata()["total_wins"] != 42 {
+		t.Errorf("Expected total_wins=42 in metadata")
 	}
 }
 
 func TestProcessor_ProcessStatEvent_LosingStreak(t *testing.T) {
-	store := newMockStateStore()
-	processor := NewProcessor(store, "test-namespace")
+	processor := setupTestProcessor()
 
 	event := &statistic.StatItemUpdated{
 		UserId: "test-user-789",
@@ -199,17 +260,12 @@ func TestProcessor_ProcessStatEvent_LosingStreak(t *testing.T) {
 		t.Fatalf("Failed to process stat event: %v", err)
 	}
 
-	if signal.Type() != TypeLoss {
-		t.Errorf("Expected signal type '%s', got '%s'", TypeLoss, signal.Type())
+	if signal.Type() != "losing_streak" {
+		t.Errorf("Expected signal type 'losing_streak', got '%s'", signal.Type())
 	}
 
-	lossSignal, ok := signal.(*LossSignal)
-	if !ok {
-		t.Fatal("Expected LossSignal")
-	}
-
-	if lossSignal.CurrentStreak != 7 {
-		t.Errorf("Expected streak 7, got %d", lossSignal.CurrentStreak)
+	if signal.Metadata()["current_streak"] != 7 {
+		t.Errorf("Expected current_streak=7 in metadata")
 	}
 }
 

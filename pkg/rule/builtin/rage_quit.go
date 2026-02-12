@@ -6,6 +6,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +49,7 @@ func (r *RageQuitRule) Name() string {
 
 // SignalTypes returns the signal types this rule handles.
 func (r *RageQuitRule) SignalTypes() []string {
-	return []string{signal.TypeRageQuit}
+	return []string{signalBuiltin.TypeRageQuit}
 }
 
 // Config returns the rule configuration.
@@ -59,7 +60,7 @@ func (r *RageQuitRule) Config() rule.RuleConfig {
 // Evaluate checks if the player has reached the rage quit threshold.
 func (r *RageQuitRule) Evaluate(ctx context.Context, sig signal.Signal) (bool, *rule.Trigger, error) {
 	// Type assert to RageQuitSignal
-	rageQuitSig, ok := sig.(*signal.RageQuitSignal)
+	rageQuitSig, ok := sig.(*signalBuiltin.RageQuitSignal)
 	if !ok {
 		return false, nil, fmt.Errorf("expected RageQuitSignal, got %T", sig)
 	}
