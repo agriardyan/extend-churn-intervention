@@ -12,16 +12,23 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/AccelByte/extends-anti-churn/pkg/action"
+	actionBuiltin "github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/common"
 	"github.com/AccelByte/extends-anti-churn/pkg/handler"
 	pb_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
 	pb_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
+	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	signalPkg "github.com/AccelByte/extends-anti-churn/pkg/signal"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
+	"github.com/go-redis/redis/v8"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
@@ -37,6 +44,8 @@ import (
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+
+	_ "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin" // Import to register built-in rules
 )
 
 const (
@@ -47,6 +56,19 @@ const (
 	metricsPort     = 8080
 	metricsEndpoint = "/metrics"
 )
+
+// stateStoreAdapter adapts Redis client to the StateStore interface needed by actions.
+type stateStoreAdapter struct {
+	client *redis.Client
+}
+
+func (s *stateStoreAdapter) Load(ctx context.Context, userID string) (*state.ChurnState, error) {
+	return state.GetChurnState(ctx, s.client, userID)
+}
+
+func (s *stateStoreAdapter) Update(ctx context.Context, userID string, churnState *state.ChurnState) error {
+	return state.UpdateChurnState(ctx, s.client, userID, churnState)
+}
 
 func main() {
 	logrus.Infof("starting app server..")
@@ -110,11 +132,107 @@ func main() {
 	defer redisClient.Close()
 	logrus.Infof("Redis client initialized")
 
-	// Register event listeners
-	oauthListener := handler.NewOAuth(redisClient, namespace)
+	// Load pipeline configuration
+	configPath := common.GetEnv("CONFIG_PATH", "config/pipeline.yaml")
+	pipelineConfig, err := pipeline.LoadConfig(configPath)
+	if err != nil {
+		logrus.Fatalf("failed to load pipeline configuration from %s: %v", configPath, err)
+	}
+	logrus.Infof("loaded pipeline configuration from %s", configPath)
+
+	// Initialize signal processor with Redis state store
+	stateStore := signalPkg.NewRedisStateStore(redisClient)
+	processor := signalPkg.NewProcessor(stateStore, namespace)
+	logrus.Infof("initialized signal processor")
+
+	// Convert pipeline rule configs to rule package configs
+	ruleConfigs := make([]rule.RuleConfig, len(pipelineConfig.Rules))
+	for i, rc := range pipelineConfig.Rules {
+		ruleConfigs[i] = rule.RuleConfig{
+			ID:         rc.ID,
+			Type:       rc.Type,
+			Enabled:    rc.Enabled,
+			Parameters: rc.Parameters,
+		}
+		if rc.Cooldown != nil {
+			duration, err := time.ParseDuration(rc.Cooldown.Duration)
+			if err != nil {
+				logrus.Fatalf("invalid cooldown duration for rule %s: %v", rc.ID, err)
+			}
+			scope := "global"
+			if rc.Cooldown.PerUser {
+				scope = "per_user"
+			}
+			ruleConfigs[i].Cooldown = &rule.CooldownConfig{
+				Duration: duration,
+				Scope:    scope,
+			}
+		}
+	}
+
+	// Initialize rule registry and register built-in rules
+	ruleRegistry := rule.NewRegistry()
+	if err := rule.RegisterRules(ruleRegistry, ruleConfigs); err != nil {
+		logrus.Fatalf("failed to register rules: %v", err)
+	}
+	logrus.Infof("registered %d rules", len(ruleConfigs))
+
+	// Initialize rule engine
+	ruleEngine := rule.NewEngine(ruleRegistry)
+	logrus.Infof("initialized rule engine")
+
+	// Initialize action registry and register built-in actions
+	actionRegistry := action.NewRegistry()
+
+	// Set up dependencies for built-in actions
+	// Create adapter for StateStore interface
+	stateStoreAdapter := &stateStoreAdapter{client: redisClient}
+	itemGranter := actionBuiltin.NewAccelByteItemGranter(configRepo, tokenRepo, namespace)
+	deps := &actionBuiltin.BuiltinDependencies{
+		StateStore:  stateStoreAdapter,
+		ItemGranter: itemGranter,
+	}
+	actionBuiltin.RegisterBuiltinActions(*deps)
+
+	// Convert pipeline action configs to action package configs
+	actionConfigs := make([]action.ActionConfig, len(pipelineConfig.Actions))
+	for i, ac := range pipelineConfig.Actions {
+		actionConfigs[i] = action.ActionConfig{
+			ID:         ac.ID,
+			Type:       ac.Type,
+			Enabled:    ac.Enabled,
+			Parameters: ac.Parameters,
+		}
+	}
+
+	// Register actions from config
+	if err := action.RegisterActions(actionRegistry, actionConfigs); err != nil {
+		logrus.Fatalf("failed to register actions: %v", err)
+	}
+	logrus.Infof("registered %d actions", len(actionConfigs))
+
+	// Initialize action executor
+	actionExecutor := action.NewExecutor(actionRegistry)
+	logrus.Infof("initialized action executor")
+
+	// Build rule-to-actions mapping from pipeline config
+	ruleActions := make(map[string][]string)
+	for _, rc := range pipelineConfig.Rules {
+		if len(rc.Actions) > 0 {
+			ruleActions[rc.ID] = rc.Actions
+		}
+	}
+	logrus.Infof("configured %d rule-to-action mappings", len(ruleActions))
+
+	// Initialize pipeline manager with rule-to-actions mapping
+	pipelineManager := pipeline.NewManager(processor, ruleEngine, actionExecutor, ruleActions, nil)
+	logrus.Infof("initialized pipeline manager")
+
+	// Register event listeners with pipeline manager
+	oauthListener := handler.NewOAuth(pipelineManager, namespace)
 	pb_iam.RegisterOauthTokenOauthTokenGeneratedServiceServer(s, oauthListener)
 
-	statisticListener := handler.NewStatistic(configRepo, tokenRepo, redisClient, namespace)
+	statisticListener := handler.NewStatistic(pipelineManager, namespace)
 	pb_social.RegisterStatisticStatItemUpdatedServiceServer(s, statisticListener)
 
 	logrus.Infof("registered event listeners: OAuth and Statistic")

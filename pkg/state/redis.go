@@ -16,6 +16,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// StateStore is an interface for loading and updating player churn state.
+// This allows for dependency injection and testing.
+type StateStore interface {
+	Load(ctx context.Context, userID string) (*ChurnState, error)
+	Update(ctx context.Context, userID string, state *ChurnState) error
+}
+
 const (
 	// DefaultTTL is the default TTL for player state in Redis (30 days)
 	DefaultTTL = 30 * 24 * time.Hour

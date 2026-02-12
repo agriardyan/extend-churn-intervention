@@ -10,28 +10,28 @@ services:
       timeout: 3s
       retries: 5
 
-  app:
-    build: .
-    ports:
-      - "6565:6565"
-      - "8080:8080"
-    environment:
-      - AB_CLIENT_ID=${AB_CLIENT_ID}
-      - AB_CLIENT_SECRET=${AB_CLIENT_SECRET}
-      - AB_BASE_URL=${AB_BASE_URL}
-      - AB_NAMESPACE=${AB_NAMESPACE}
-      - SPEED_BOOSTER_ITEM_ID=${SPEED_BOOSTER_ITEM_ID}
-      # Redis Configuration
-      - REDIS_MODE=${REDIS_MODE:-auto}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - REDIS_MAX_RETRIES=${REDIS_MAX_RETRIES:-5}
-      - REDIS_RETRY_DELAY_MS=${REDIS_RETRY_DELAY_MS:-1000}
-      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://host.docker.internal:9411/api/v2/spans
-      - OTEL_SERVICE_NAME=ExtendAntiChurnHandler
-    depends_on:
-      redis:
-        condition: service_healthy
-    extra_hosts:
-      - host.docker.internal:host-gateway
+  # app:
+  #   build: .
+  #   ports:
+  #     - "6565:6565"
+  #     - "8080:8080"
+  #   environment:
+  #     - AB_CLIENT_ID=${AB_CLIENT_ID}
+  #     - AB_CLIENT_SECRET=${AB_CLIENT_SECRET}
+  #     - AB_BASE_URL=${AB_BASE_URL}
+  #     - AB_NAMESPACE=${AB_NAMESPACE}
+  #     - SPEED_BOOSTER_ITEM_ID=${SPEED_BOOSTER_ITEM_ID}
+  #     # Redis Configuration
+  #     - REDIS_MODE=${REDIS_MODE:-auto}
+  #     - REDIS_HOST=${REDIS_HOST:-redis}
+  #     - REDIS_PORT=${REDIS_PORT:-6379}
+  #     - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+  #     - REDIS_MAX_RETRIES=${REDIS_MAX_RETRIES:-5}
+  #     - REDIS_RETRY_DELAY_MS=${REDIS_RETRY_DELAY_MS:-1000}
+  #     - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://host.docker.internal:9411/api/v2/spans
+  #     - OTEL_SERVICE_NAME=ExtendAntiChurnHandler
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   extra_hosts:
+  #     - host.docker.internal:host-gateway

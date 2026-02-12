@@ -1,0 +1,3 @@
+1. We need to import blank `_ "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin" // Import to register built-in rules`. Need to rethink better way to initialize it.
+2. Feels like this design still not flexible or easily customizable enough by other users.
+3. `CreateChallenge` at pkg/state/logic.go seems unecessary. Just update the state in the caller code. This `CreateChallenge` called by `Execute` in pkg/action/builtin/comeback_challenge.go
