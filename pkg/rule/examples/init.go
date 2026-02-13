@@ -1,12 +1,13 @@
-package builtin
+package examples
 
 import (
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
-// RegisterBuiltinRules registers all built-in rule types with the factory.
+// RegisterRules registers all built-in rule types with the factory.
 // deps can be nil - rules that need dependencies will handle nil gracefully.
-func RegisterBuiltinRules(deps *rule.RuleDependencies) {
+func RegisterRules(deps *service.Dependencies) {
 	// Rules without external dependencies - pass config directly
 	rule.RegisterRuleType(RageQuitRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
 		return NewRageQuitRule(config), nil
@@ -22,10 +23,5 @@ func RegisterBuiltinRules(deps *rule.RuleDependencies) {
 
 	rule.RegisterRuleType(ChallengeCompletionRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
 		return NewChallengeCompletionRule(config), nil
-	})
-
-	// Rules with external dependencies - use deps parameter
-	rule.RegisterRuleType(ClanActivityRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
-		return NewClanActivityRule(config, deps), nil
 	})
 }

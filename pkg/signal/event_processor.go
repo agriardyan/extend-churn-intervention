@@ -14,13 +14,13 @@ type EventProcessor interface {
 	EventType() string
 
 	// Process converts a raw event into a signal with enriched context.
-	Process(ctx context.Context, event interface{}, contextLoader ContextLoader) (Signal, error)
+	Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error)
 }
 
-// ContextLoader provides player context for event processing.
+// PlayerContextLoader provides player context for event processing.
 // This allows event processors to enrich signals without direct state store access.
-type ContextLoader interface {
-	LoadPlayerContext(ctx context.Context, userID string) (*PlayerContext, error)
+type PlayerContextLoader interface {
+	Load(ctx context.Context, userID string) (*PlayerContext, error)
 }
 
 // EventProcessorRegistry manages registered event processors.

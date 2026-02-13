@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
+	ruleExamples "github.com/AccelByte/extends-anti-churn/pkg/rule/examples"
 )
 
 func init() {
 	// Register builtin rules for all tests
 	// Pass nil dependencies - tests will mock as needed
-	ruleBuiltin.RegisterBuiltinRules(nil)
+	ruleExamples.RegisterRules(nil)
 }
 
 const (

@@ -1,4 +1,4 @@
-package builtin
+package examples
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 	"github.com/sirupsen/logrus"
@@ -28,11 +29,11 @@ type ComebackChallengeAction struct {
 	winsNeeded    int
 	durationDays  int
 	cooldownHours int
-	stateStore    state.StateStore
+	stateStore    service.StateStore
 }
 
 // NewComebackChallengeAction creates a new comeback challenge action.
-func NewComebackChallengeAction(config action.ActionConfig, stateStore state.StateStore) *ComebackChallengeAction {
+func NewComebackChallengeAction(config action.ActionConfig, stateStore service.StateStore) *ComebackChallengeAction {
 	winsNeeded := config.GetParameterInt("wins_needed", DefaultWinsNeeded)
 	durationDays := config.GetParameterInt("duration_days", DefaultDurationDays)
 	cooldownHours := config.GetParameterInt("cooldown_hours", DefaultCooldownHours)
@@ -98,7 +99,8 @@ func (a *ComebackChallengeAction) Execute(ctx context.Context, trigger *rule.Tri
 
 	// Save updated state
 	if a.stateStore != nil {
-		if err := a.stateStore.Update(ctx, trigger.UserID, playerState); err != nil {
+		err := a.stateStore.UpdateChurnState(ctx, trigger.UserID, playerState)
+		if err != nil {
 			logrus.Errorf("failed to save player state after challenge creation: %v", err)
 			return err
 		}
@@ -126,7 +128,8 @@ func (a *ComebackChallengeAction) Rollback(ctx context.Context, trigger *rule.Tr
 
 		// Save updated state
 		if a.stateStore != nil {
-			if err := a.stateStore.Update(ctx, trigger.UserID, playerState); err != nil {
+			err := a.stateStore.UpdateChurnState(ctx, trigger.UserID, playerState)
+			if err != nil {
 				logrus.Errorf("failed to save player state after rollback: %v", err)
 				return err
 			}

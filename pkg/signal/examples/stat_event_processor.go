@@ -1,4 +1,4 @@
-package builtin
+package examples
 
 import (
 	"context"
@@ -26,7 +26,7 @@ func (p *StatEventProcessor) EventType() string {
 	return "stat_item_updated"
 }
 
-func (p *StatEventProcessor) Process(ctx context.Context, event interface{}, contextLoader signal.ContextLoader) (signal.Signal, error) {
+func (p *StatEventProcessor) Process(ctx context.Context, event interface{}, playerContextLoader signal.PlayerContextLoader) (signal.Signal, error) {
 	statEvent, ok := event.(*statistic.StatItemUpdated)
 	if !ok {
 		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
@@ -53,7 +53,7 @@ func (p *StatEventProcessor) Process(ctx context.Context, event interface{}, con
 	}
 
 	// Load player context
-	playerCtx, err := contextLoader.LoadPlayerContext(ctx, userID)
+	playerCtx, err := playerContextLoader.Load(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load player context for user %s: %w", userID, err)
 	}

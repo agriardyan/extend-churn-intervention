@@ -1,4 +1,4 @@
-package builtin
+package examples
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
@@ -59,7 +59,7 @@ func TestRageQuitRule_Evaluate(t *testing.T) {
 				UserID: "test-user",
 				State:  &state.ChurnState{},
 			}
-			sig := signalBuiltin.NewRageQuitSignal("test-user", time.Now(), int(tt.statValue), playerCtx)
+			sig := signalExamples.NewRageQuitSignal("test-user", time.Now(), int(tt.statValue), playerCtx)
 
 			matched, trigger, err := rule.Evaluate(context.Background(), sig)
 			if err != nil {
@@ -103,7 +103,7 @@ func TestRageQuitRule_WrongSignalType(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
+	sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	matched, trigger, err := rule.Evaluate(context.Background(), sig)
 	if err == nil {
@@ -165,7 +165,7 @@ func TestLosingStreakRule_Evaluate(t *testing.T) {
 				UserID: "test-user",
 				State:  &state.ChurnState{},
 			}
-			sig := signalBuiltin.NewLosingStreakSignal("test-user", time.Now(), int(tt.statValue), playerCtx)
+			sig := signalExamples.NewLosingStreakSignal("test-user", time.Now(), int(tt.statValue), playerCtx)
 
 			matched, trigger, err := rule.Evaluate(context.Background(), sig)
 			if err != nil {
@@ -290,7 +290,7 @@ func TestSessionDeclineRule_Evaluate(t *testing.T) {
 				UserID: "test-user",
 				State:  playerState,
 			}
-			sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", now, playerCtx)
+			sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", now, playerCtx)
 
 			matched, trigger, err := rule.Evaluate(context.Background(), sig)
 			if err != nil {
@@ -328,7 +328,7 @@ func TestSessionDeclineRule_NoPlayerContext(t *testing.T) {
 	rule := NewSessionDeclineRule(config)
 
 	// Create signal without player context
-	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), nil)
+	sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), nil)
 
 	matched, trigger, err := rule.Evaluate(context.Background(), sig)
 	if err != nil {

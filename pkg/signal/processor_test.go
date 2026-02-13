@@ -8,6 +8,7 @@ import (
 
 	oauth "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
 	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
@@ -46,8 +47,8 @@ func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, ch
 }
 
 // setupTestProcessor creates a processor with builtin mappers and event processors registered
-func setupTestProcessor(stores ...StateStore) *Processor {
-	var store StateStore
+func setupTestProcessor(stores ...service.StateStore) *Processor {
+	var store service.StateStore
 	if len(stores) > 0 {
 		store = stores[0]
 	} else {
@@ -91,7 +92,7 @@ func (p *testOAuthEventProcessor) EventType() string {
 	return "oauth_token_generated"
 }
 
-func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}, contextLoader ContextLoader) (Signal, error) {
+func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
 	oauthEvent, ok := event.(*oauth.OauthTokenGenerated)
 	if !ok {
 		return nil, fmt.Errorf("expected *oauth.OauthTokenGenerated, got %T", event)
@@ -102,7 +103,7 @@ func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}
 		return nil, fmt.Errorf("user ID is empty")
 	}
 
-	playerCtx, err := contextLoader.LoadPlayerContext(ctx, userID)
+	playerCtx, err := contextLoader.Load(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func (p *testStatEventProcessor) EventType() string {
 	return "stat_item_updated"
 }
 
-func (p *testStatEventProcessor) Process(ctx context.Context, event interface{}, contextLoader ContextLoader) (Signal, error) {
+func (p *testStatEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
 	statEvent, ok := event.(*statistic.StatItemUpdated)
 	if !ok {
 		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
@@ -149,7 +150,7 @@ func (p *testStatEventProcessor) Process(ctx context.Context, event interface{},
 		return nil, fmt.Errorf("stat code is empty")
 	}
 
-	playerCtx, err := contextLoader.LoadPlayerContext(ctx, userID)
+	playerCtx, err := contextLoader.Load(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +480,7 @@ func TestProcessor_LoadPlayerContext(t *testing.T) {
 
 	processor := NewProcessor(store, "test-namespace")
 
-	ctx, err := processor.loadPlayerContext(context.Background(), "test-user")
+	ctx, err := processor.Load(context.Background(), "test-user")
 	if err != nil {
 		t.Fatalf("Failed to load player context: %v", err)
 	}

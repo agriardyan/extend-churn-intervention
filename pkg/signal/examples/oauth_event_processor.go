@@ -1,4 +1,4 @@
-package builtin
+package examples
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func (p *OAuthEventProcessor) EventType() string {
 	return "oauth_token_generated"
 }
 
-func (p *OAuthEventProcessor) Process(ctx context.Context, event interface{}, contextLoader signal.ContextLoader) (signal.Signal, error) {
+func (p *OAuthEventProcessor) Process(ctx context.Context, event interface{}, playerContextLoader signal.PlayerContextLoader) (signal.Signal, error) {
 	oauthEvent, ok := event.(*oauth.OauthTokenGenerated)
 	if !ok {
 		return nil, fmt.Errorf("expected *oauth.OauthTokenGenerated, got %T", event)
@@ -33,7 +33,7 @@ func (p *OAuthEventProcessor) Process(ctx context.Context, event interface{}, co
 	}
 
 	// Load player context
-	playerCtx, err := contextLoader.LoadPlayerContext(ctx, userID)
+	playerCtx, err := playerContextLoader.Load(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load player context for user %s: %w", userID, err)
 	}

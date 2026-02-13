@@ -1,4 +1,4 @@
-package builtin
+package examples
 
 import (
 	"context"
@@ -17,27 +17,27 @@ type mockStateStore struct {
 	updateError  error
 }
 
-func (m *mockStateStore) Load(ctx context.Context, userID string) (*state.ChurnState, error) {
+func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*state.ChurnState, error) {
 	return &state.ChurnState{}, nil
 }
 
-func (m *mockStateStore) Update(ctx context.Context, userID string, state *state.ChurnState) error {
+func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, state *state.ChurnState) error {
 	m.updateCalled = true
 	return m.updateError
 }
 
-// mockItemGranter is a mock implementation for testing
-type mockItemGranter struct {
+// mockEntitlementGranter is a mock implementation for testing
+type mockEntitlementGranter struct {
 	grantCalled bool
 	grantError  error
 	lastItemID  string
 	lastQty     int32
 }
 
-func (m *mockItemGranter) GrantItem(ctx context.Context, namespace, userID, itemID string, quantity int32) error {
+func (m *mockEntitlementGranter) GrantEntitlement(ctx context.Context, userID, itemID string, quantity int) error {
 	m.grantCalled = true
 	m.lastItemID = itemID
-	m.lastQty = quantity
+	m.lastQty = int32(quantity)
 	return m.grantError
 }
 
@@ -187,7 +187,7 @@ func TestComebackChallengeAction_Rollback(t *testing.T) {
 }
 
 func TestGrantItemAction_Execute(t *testing.T) {
-	mockGranter := &mockItemGranter{}
+	mockGranter := &mockEntitlementGranter{}
 	config := action.ActionConfig{
 		ID:      "test_grant",
 		Type:    GrantItemActionID,
@@ -251,7 +251,7 @@ func TestGrantItemAction_Execute_TestMode(t *testing.T) {
 }
 
 func TestGrantItemAction_Execute_NoItemID(t *testing.T) {
-	mockGranter := &mockItemGranter{}
+	mockGranter := &mockEntitlementGranter{}
 	config := action.ActionConfig{
 		ID:      "test_grant",
 		Type:    GrantItemActionID,
@@ -277,7 +277,7 @@ func TestGrantItemAction_Execute_NoItemID(t *testing.T) {
 }
 
 func TestGrantItemAction_Rollback(t *testing.T) {
-	mockGranter := &mockItemGranter{}
+	mockGranter := &mockEntitlementGranter{}
 	config := action.ActionConfig{
 		ID:      "test_grant",
 		Type:    GrantItemActionID,

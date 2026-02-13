@@ -1,4 +1,4 @@
-package builtin
+package examples
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/platform"
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	"github.com/sirupsen/logrus"
 )
@@ -30,14 +31,14 @@ type ItemGranter interface {
 // This action integrates with AccelByte Platform to fulfill items.
 type GrantItemAction struct {
 	config    action.ActionConfig
-	granter   ItemGranter
+	granter   service.EntitlementGranter
 	namespace string
 	itemID    string
 	quantity  int32
 }
 
 // NewGrantItemAction creates a new grant item action.
-func NewGrantItemAction(config action.ActionConfig, granter ItemGranter, namespace string) *GrantItemAction {
+func NewGrantItemAction(config action.ActionConfig, granter service.EntitlementGranter, namespace string) *GrantItemAction {
 	itemID := config.GetParameterString("item_id", "")
 	quantity := int32(config.GetParameterInt("quantity", 1))
 
@@ -82,7 +83,7 @@ func (a *GrantItemAction) Execute(ctx context.Context, trigger *rule.Trigger, pl
 	logrus.Infof("granting item %s (quantity: %d) to user %s",
 		a.itemID, a.quantity, trigger.UserID)
 
-	err := a.granter.GrantItem(ctx, a.namespace, trigger.UserID, a.itemID, a.quantity)
+	err := a.granter.GrantEntitlement(ctx, trigger.UserID, a.itemID, int(a.quantity))
 	if err != nil {
 		return fmt.Errorf("failed to grant item: %w", err)
 	}

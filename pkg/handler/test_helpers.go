@@ -6,8 +6,9 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
 	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
@@ -20,12 +21,12 @@ func setupTestPipeline(namespace string, mr *miniredis.Miniredis) *pipeline.Mana
 	})
 
 	// Create signal processor with Redis state store
-	stateStore := signal.NewRedisStateStore(client)
+	stateStore := service.NewRedisStateStore(client, service.RedisStateStoreConfig{})
 	processor := signal.NewProcessor(stateStore, namespace)
 
 	// Register builtin mappers and event processors
-	signalBuiltin.RegisterBuiltinMappers(processor.GetMapperRegistry())
-	signalBuiltin.RegisterBuiltinEventProcessors(
+	signalExamples.RegisterEventMappers(processor.GetMapperRegistry())
+	signalExamples.RegisterEventProcessors(
 		processor.GetEventProcessorRegistry(),
 		processor.GetMapperRegistry(),
 	)

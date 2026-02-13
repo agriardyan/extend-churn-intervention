@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
@@ -69,7 +69,7 @@ func TestEngine_Evaluate_NoRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
+	sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -112,7 +112,7 @@ func TestEngine_Evaluate_SingleMatchingRule(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
+	sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -167,7 +167,7 @@ func TestEngine_Evaluate_MultipleMatchingRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
+	sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -208,7 +208,7 @@ func TestEngine_Evaluate_NoMatchingRules(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
+	sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -238,7 +238,7 @@ func TestEngine_Evaluate_RuleError(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
+	sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	// Engine should not return error, but log it and continue
@@ -287,7 +287,7 @@ func TestEngine_Evaluate_MixedResults(t *testing.T) {
 		UserID: "test-user",
 		State:  &state.ChurnState{},
 	}
-	sig := signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
+	sig := signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx)
 
 	triggers, err := engine.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -324,8 +324,8 @@ func TestEngine_EvaluateMultiple(t *testing.T) {
 	}
 
 	signals := []signal.Signal{
-		signalBuiltin.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx),
-		signalBuiltin.NewWinSignal("test-user", time.Now(), 5, playerCtx),
+		signalExamples.NewOauthTokenGeneratedSignal("test-user", time.Now(), playerCtx),
+		signalExamples.NewWinSignal("test-user", time.Now(), 5, playerCtx),
 	}
 
 	triggers, err := engine.EvaluateMultiple(context.Background(), signals)

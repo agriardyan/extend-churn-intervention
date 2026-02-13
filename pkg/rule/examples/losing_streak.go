@@ -1,4 +1,4 @@
-package builtin
+package examples
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,7 +49,7 @@ func (r *LosingStreakRule) Name() string {
 
 // SignalTypes returns the signal types this rule handles.
 func (r *LosingStreakRule) SignalTypes() []string {
-	return []string{signalBuiltin.TypeLosingStreak}
+	return []string{signalExamples.TypeLosingStreak}
 }
 
 // Config returns the rule configuration.
@@ -60,7 +60,7 @@ func (r *LosingStreakRule) Config() rule.RuleConfig {
 // Evaluate checks if the player has reached the losing streak threshold.
 func (r *LosingStreakRule) Evaluate(ctx context.Context, sig signal.Signal) (bool, *rule.Trigger, error) {
 	// Type assert to LossSignal
-	lossSig, ok := sig.(*signalBuiltin.LosingStreakSignal)
+	lossSig, ok := sig.(*signalExamples.LosingStreakSignal)
 	if !ok {
 		return false, nil, fmt.Errorf("expected LossSignal, got %T", sig)
 	}

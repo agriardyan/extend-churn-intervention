@@ -1,11 +1,11 @@
-package builtin
+package examples
 
 import (
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 )
 
-// RegisterBuiltinEventProcessors registers all built-in event processors.
-func RegisterBuiltinEventProcessors(
+// RegisterEventProcessors registers all built-in event processors.
+func RegisterEventProcessors(
 	eventRegistry *signal.EventProcessorRegistry,
 	mapperRegistry *signal.MapperRegistry,
 ) {

@@ -10,8 +10,9 @@ import (
 	asyncapi_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
@@ -111,12 +112,12 @@ func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, st
 }
 
 // setupTestProcessor creates a processor with builtin event processors and mappers registered
-func setupTestProcessor(stateStore signal.StateStore) *signal.Processor {
+func setupTestProcessor(stateStore service.StateStore) *signal.Processor {
 	processor := signal.NewProcessor(stateStore, "test")
 
 	// Register builtin mappers and event processors
-	signalBuiltin.RegisterBuiltinMappers(processor.GetMapperRegistry())
-	signalBuiltin.RegisterBuiltinEventProcessors(
+	signalExamples.RegisterEventMappers(processor.GetMapperRegistry())
+	signalExamples.RegisterEventProcessors(
 		processor.GetEventProcessorRegistry(),
 		processor.GetMapperRegistry(),
 	)

@@ -14,22 +14,23 @@ import (
 	"syscall"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	actionBuiltin "github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
+	actionExamples "github.com/AccelByte/extends-anti-churn/pkg/action/examples"
 	"github.com/AccelByte/extends-anti-churn/pkg/common"
 	"github.com/AccelByte/extends-anti-churn/pkg/handler"
 	pb_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
 	pb_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
+	ruleExamples "github.com/AccelByte/extends-anti-churn/pkg/rule/examples"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	signalPkg "github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/platform"
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
-	"github.com/go-redis/redis/v8"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
@@ -55,19 +56,6 @@ const (
 	metricsPort     = 8080
 	metricsEndpoint = "/metrics"
 )
-
-// stateStoreAdapter adapts Redis client to the StateStore interface needed by actions.
-type stateStoreAdapter struct {
-	client *redis.Client
-}
-
-func (s *stateStoreAdapter) Load(ctx context.Context, userID string) (*state.ChurnState, error) {
-	return state.GetChurnState(ctx, s.client, userID)
-}
-
-func (s *stateStoreAdapter) Update(ctx context.Context, userID string, churnState *state.ChurnState) error {
-	return state.UpdateChurnState(ctx, s.client, userID, churnState)
-}
 
 func main() {
 	logrus.Infof("starting app server..")
@@ -140,15 +128,18 @@ func main() {
 	logrus.Infof("loaded pipeline configuration from %s", configPath)
 
 	// Initialize signal processor with Redis state store
-	stateStore := signalPkg.NewRedisStateStore(redisClient)
-	processor := signalPkg.NewProcessor(stateStore, namespace)
+	redisStateStore := service.NewRedisStateStore(
+		redisClient,
+		service.RedisStateStoreConfig{},
+	)
+	processor := signalPkg.NewProcessor(redisStateStore, namespace)
 
-	// Register built-in signal mappers
-	signalBuiltin.RegisterBuiltinMappers(processor.GetMapperRegistry())
+	// Register signal mappers
+	signalExamples.RegisterEventMappers(processor.GetMapperRegistry())
 	logrus.Infof("initialized signal processor with %d mappers", processor.GetMapperRegistry().Count())
 
-	// Register built-in event processors
-	signalBuiltin.RegisterBuiltinEventProcessors(
+	// Register event processors
+	signalExamples.RegisterEventProcessors(
 		processor.GetEventProcessorRegistry(),
 		processor.GetMapperRegistry(),
 	)
@@ -167,14 +158,13 @@ func main() {
 
 	// Initialize rule dependencies (services for external data)
 	// Currently nil - services will be added as needed per rule
-	ruleDeps := rule.NewRuleDependencies()
 	// Future: Add services as they're implemented
-	// ruleDeps.WithClanService(clanService).WithLeaderboardService(leaderboardService)
+	ruleDeps := service.NewDependencies()
 
-	// Register built-in rule types
-	ruleBuiltin.RegisterBuiltinRules(ruleDeps)
+	// Register rule types
+	ruleExamples.RegisterRules(ruleDeps)
 
-	// Initialize rule registry and register built-in rules
+	// Initialize rule registry and register rules
 	ruleRegistry := rule.NewRegistry()
 	if err := rule.RegisterRules(ruleRegistry, ruleConfigs); err != nil {
 		logrus.Fatalf("failed to register rules: %v", err)
@@ -185,18 +175,27 @@ func main() {
 	ruleEngine := rule.NewEngine(ruleRegistry)
 	logrus.Infof("initialized rule engine")
 
-	// Initialize action registry and register built-in actions
+	// Initialize action registry and register actions
 	actionRegistry := action.NewRegistry()
 
-	// Set up dependencies for built-in actions
+	// Set up dependencies for actions
 	// Create adapter for StateStore interface
-	stateStoreAdapter := &stateStoreAdapter{client: redisClient}
-	itemGranter := actionBuiltin.NewAccelByteItemGranter(configRepo, tokenRepo, namespace)
-	deps := &actionBuiltin.BuiltinDependencies{
-		StateStore:  stateStoreAdapter,
-		ItemGranter: itemGranter,
+	fulfillmentService := platform.FulfillmentService{
+		Client:           factory.NewPlatformClient(configRepo),
+		ConfigRepository: configRepo,
+		TokenRepository:  tokenRepo,
 	}
-	actionBuiltin.RegisterBuiltinActions(*deps)
+	itemGranter := service.NewEntitlementService(
+		fulfillmentService,
+		service.EntitlementServiceConfig{
+			Namespace: namespace,
+		},
+	)
+	deps := &actionExamples.Dependencies{
+		StateStore:         redisStateStore,
+		EntitlementGranter: itemGranter,
+	}
+	actionExamples.RegisterActions(deps)
 
 	// Convert pipeline action configs to action package configs
 	actionConfigs := make([]action.ActionConfig, len(pipelineConfig.Actions))

@@ -5,40 +5,45 @@ import (
 	"testing"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	"github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
+	"github.com/AccelByte/extends-anti-churn/pkg/action/examples"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
+
+func init() {
+	// Register builtin actions for all tests
+	examples.RegisterActions(&examples.Dependencies{})
+}
 
 // mockStateStore for testing
 type mockStateStore struct{}
 
-func (m *mockStateStore) Load(ctx context.Context, userID string) (*state.ChurnState, error) {
+func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*state.ChurnState, error) {
 	return &state.ChurnState{}, nil
 }
 
-func (m *mockStateStore) Update(ctx context.Context, userID string, state *state.ChurnState) error {
+func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, state *state.ChurnState) error {
 	return nil
 }
 
 // mockItemGranter for testing
 type mockItemGranter struct{}
 
-func (m *mockItemGranter) GrantItem(ctx context.Context, namespace, userID, itemID string, quantity int32) error {
+func (m *mockItemGranter) GrantEntitlement(ctx context.Context, userID, itemID string, quantity int) error {
 	return nil
 }
 
 func TestCreateAction_ComebackChallenge(t *testing.T) {
 	// Register built-in actions
-	deps := builtin.BuiltinDependencies{
-		StateStore:  &mockStateStore{},
-		ItemGranter: &mockItemGranter{},
-		Namespace:   "test",
+	deps := &examples.Dependencies{
+		StateStore:         &mockStateStore{},
+		EntitlementGranter: &mockItemGranter{},
+		Namespace:          "test",
 	}
-	builtin.RegisterBuiltinActions(deps)
+	examples.RegisterActions(deps)
 
 	config := action.ActionConfig{
 		ID:      "test_challenge",
-		Type:    builtin.ComebackChallengeActionID,
+		Type:    examples.ComebackChallengeActionID,
 		Enabled: true,
 	}
 
@@ -62,16 +67,16 @@ func TestCreateAction_ComebackChallenge(t *testing.T) {
 
 func TestCreateAction_GrantItem(t *testing.T) {
 	// Register built-in actions
-	deps := builtin.BuiltinDependencies{
-		StateStore:  &mockStateStore{},
-		ItemGranter: &mockItemGranter{},
-		Namespace:   "test",
+	deps := &examples.Dependencies{
+		StateStore:         &mockStateStore{},
+		EntitlementGranter: &mockItemGranter{},
+		Namespace:          "test",
 	}
-	builtin.RegisterBuiltinActions(deps)
+	examples.RegisterActions(deps)
 
 	config := action.ActionConfig{
 		ID:      "test_grant",
-		Type:    builtin.GrantItemActionID,
+		Type:    examples.GrantItemActionID,
 		Enabled: true,
 	}
 
@@ -96,7 +101,7 @@ func TestCreateAction_GrantItem(t *testing.T) {
 func TestCreateAction_Disabled(t *testing.T) {
 	config := action.ActionConfig{
 		ID:      "disabled_action",
-		Type:    builtin.ComebackChallengeActionID,
+		Type:    examples.ComebackChallengeActionID,
 		Enabled: false,
 	}
 
@@ -129,22 +134,22 @@ func TestCreateAction_UnknownType(t *testing.T) {
 
 func TestCreateActions_Multiple(t *testing.T) {
 	// Register built-in actions
-	deps := builtin.BuiltinDependencies{
-		StateStore:  &mockStateStore{},
-		ItemGranter: &mockItemGranter{},
-		Namespace:   "test",
+	deps := &examples.Dependencies{
+		StateStore:         &mockStateStore{},
+		EntitlementGranter: &mockItemGranter{},
+		Namespace:          "test",
 	}
-	builtin.RegisterBuiltinActions(deps)
+	examples.RegisterActions(deps)
 
 	configs := []action.ActionConfig{
 		{
 			ID:      "challenge1",
-			Type:    builtin.ComebackChallengeActionID,
+			Type:    examples.ComebackChallengeActionID,
 			Enabled: true,
 		},
 		{
 			ID:      "grant1",
-			Type:    builtin.GrantItemActionID,
+			Type:    examples.GrantItemActionID,
 			Enabled: true,
 		},
 	}
@@ -162,17 +167,17 @@ func TestCreateActions_Multiple(t *testing.T) {
 
 func TestCreateActions_WithErrors(t *testing.T) {
 	// Register built-in actions
-	deps := builtin.BuiltinDependencies{
-		StateStore:  &mockStateStore{},
-		ItemGranter: &mockItemGranter{},
-		Namespace:   "test",
+	deps := &examples.Dependencies{
+		StateStore:         &mockStateStore{},
+		EntitlementGranter: &mockItemGranter{},
+		Namespace:          "test",
 	}
-	builtin.RegisterBuiltinActions(deps)
+	examples.RegisterActions(deps)
 
 	configs := []action.ActionConfig{
 		{
 			ID:      "valid_action",
-			Type:    builtin.ComebackChallengeActionID,
+			Type:    examples.ComebackChallengeActionID,
 			Enabled: true,
 		},
 		{
@@ -182,7 +187,7 @@ func TestCreateActions_WithErrors(t *testing.T) {
 		},
 		{
 			ID:      "disabled_action",
-			Type:    builtin.GrantItemActionID,
+			Type:    examples.GrantItemActionID,
 			Enabled: false,
 		},
 	}
@@ -201,24 +206,24 @@ func TestCreateActions_WithErrors(t *testing.T) {
 
 func TestRegisterActions(t *testing.T) {
 	// Register built-in actions
-	deps := builtin.BuiltinDependencies{
-		StateStore:  &mockStateStore{},
-		ItemGranter: &mockItemGranter{},
-		Namespace:   "test",
+	deps := &examples.Dependencies{
+		StateStore:         &mockStateStore{},
+		EntitlementGranter: &mockItemGranter{},
+		Namespace:          "test",
 	}
-	builtin.RegisterBuiltinActions(deps)
+	examples.RegisterActions(deps)
 
 	registry := action.NewRegistry()
 
 	configs := []action.ActionConfig{
 		{
 			ID:      "challenge1",
-			Type:    builtin.ComebackChallengeActionID,
+			Type:    examples.ComebackChallengeActionID,
 			Enabled: true,
 		},
 		{
 			ID:      "grant1",
-			Type:    builtin.GrantItemActionID,
+			Type:    examples.GrantItemActionID,
 			Enabled: true,
 		},
 	}
@@ -237,24 +242,24 @@ func TestRegisterActions(t *testing.T) {
 
 func TestRegisterActions_DuplicateID(t *testing.T) {
 	// Register built-in actions
-	deps := builtin.BuiltinDependencies{
-		StateStore:  &mockStateStore{},
-		ItemGranter: &mockItemGranter{},
-		Namespace:   "test",
+	deps := &examples.Dependencies{
+		StateStore:         &mockStateStore{},
+		EntitlementGranter: &mockItemGranter{},
+		Namespace:          "test",
 	}
-	builtin.RegisterBuiltinActions(deps)
+	examples.RegisterActions(deps)
 
 	registry := action.NewRegistry()
 
 	configs := []action.ActionConfig{
 		{
 			ID:      "same_id",
-			Type:    builtin.ComebackChallengeActionID,
+			Type:    examples.ComebackChallengeActionID,
 			Enabled: true,
 		},
 		{
 			ID:      "same_id", // Duplicate ID
-			Type:    builtin.GrantItemActionID,
+			Type:    examples.GrantItemActionID,
 			Enabled: true,
 		},
 	}

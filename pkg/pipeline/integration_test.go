@@ -9,19 +9,20 @@ import (
 	asyncapi_oauth "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
 	asyncapi_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
 )
 
 // setupTestProcessor creates a processor with builtin event processors and mappers registered
-func setupTestProcessor(stateStore signal.StateStore) *signal.Processor {
+func setupTestProcessor(stateStore service.StateStore) *signal.Processor {
 	processor := signal.NewProcessor(stateStore, "test-namespace")
 
 	// Register builtin mappers and event processors
-	signalBuiltin.RegisterBuiltinMappers(processor.GetMapperRegistry())
-	signalBuiltin.RegisterBuiltinEventProcessors(
+	signalExamples.RegisterEventMappers(processor.GetMapperRegistry())
+	signalExamples.RegisterEventProcessors(
 		processor.GetEventProcessorRegistry(),
 		processor.GetMapperRegistry(),
 	)
@@ -45,7 +46,7 @@ func TestIntegration_PipelineWiring(t *testing.T) {
 	defer client.Close()
 
 	// Create state store
-	store := signal.NewRedisStateStore(client)
+	store := service.NewRedisStateStore(client, service.RedisStateStoreConfig{})
 
 	// Create signal processor
 	processor := setupTestProcessor(store)
