@@ -129,9 +129,6 @@ sds-dev.yaml
 vendor/
 
 # Build artifact
-./service
-service
-./go-telemetry/service
 
 # Build metadata
 ./dependencies.txt
@@ -152,6 +149,7 @@ localstack-data/
 # IDEs and editors
 main
 extends-anti-churn
+churn-intervention
 cmd/test*
 test-*
 !*.go

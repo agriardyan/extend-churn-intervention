@@ -41,6 +41,16 @@ rules:
       wins_needed: 3
       challenge_id: comeback-challenge
 
+  # Clan Activity Rule - Detects players in low-activity clans
+  # Uses external ClanService to fetch clan activity data (demonstrates lazy loading)
+  # Only triggers if player is in a clan with fewer active members than threshold
+  - id: clan-activity
+    type: clan_activity
+    enabled: false  # Disabled by default (requires ClanService implementation)
+    actions: [comeback-challenge]  # Re-engage with challenge
+    parameters:
+      min_active_members: 3  # Minimum active members in last 7 days
+
 # Actions are executed when rules trigger
 actions:
   # Comeback Challenge - Creates a time-limited challenge

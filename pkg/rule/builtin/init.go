@@ -5,7 +5,9 @@ import (
 )
 
 // RegisterBuiltinRules registers all built-in rule types with the factory.
-func RegisterBuiltinRules() {
+// deps can be nil - rules that need dependencies will handle nil gracefully.
+func RegisterBuiltinRules(deps *rule.RuleDependencies) {
+	// Rules without external dependencies - pass config directly
 	rule.RegisterRuleType(RageQuitRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
 		return NewRageQuitRule(config), nil
 	})
@@ -20,5 +22,10 @@ func RegisterBuiltinRules() {
 
 	rule.RegisterRuleType(ChallengeCompletionRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
 		return NewChallengeCompletionRule(config), nil
+	})
+
+	// Rules with external dependencies - use deps parameter
+	rule.RegisterRuleType(ClanActivityRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
+		return NewClanActivityRule(config, deps), nil
 	})
 }

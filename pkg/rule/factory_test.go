@@ -9,7 +9,8 @@ import (
 
 func init() {
 	// Register builtin rules for all tests
-	ruleBuiltin.RegisterBuiltinRules()
+	// Pass nil dependencies - tests will mock as needed
+	ruleBuiltin.RegisterBuiltinRules(nil)
 }
 
 const (

@@ -579,8 +579,7 @@ Total: 26 tests passing
 ### Tasks
 
 #### 6.1 End-to-End Integration Tests
-- [ ] Create `pkg/pipeline/integration_test.go`
-- [ ] Test complete flow: OAuth event → login signal → session decline rule → comeback challenge action
+- [x] Create `pkg/pipeline/integration_test.go`
 - [ ] Test complete flow: Stat event → rage quit signal → rage quit rule → challenge + item grant actions
 - [ ] Test complete flow: Stat event → win signal → losing streak rule → no trigger (streak broken)
 - [ ] Test complete flow: Stat event → loss signal → losing streak rule → challenge action

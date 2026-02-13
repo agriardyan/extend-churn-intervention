@@ -165,8 +165,14 @@ func main() {
 		}
 	}
 
+	// Initialize rule dependencies (services for external data)
+	// Currently nil - services will be added as needed per rule
+	ruleDeps := rule.NewRuleDependencies()
+	// Future: Add services as they're implemented
+	// ruleDeps.WithClanService(clanService).WithLeaderboardService(leaderboardService)
+
 	// Register built-in rule types
-	ruleBuiltin.RegisterBuiltinRules()
+	ruleBuiltin.RegisterBuiltinRules(ruleDeps)
 
 	// Initialize rule registry and register built-in rules
 	ruleRegistry := rule.NewRegistry()
