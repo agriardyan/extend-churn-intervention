@@ -69,6 +69,21 @@ func setupTestProcessor(stores ...StateStore) *Processor {
 	return processor
 }
 
+// testSignal is a simple signal implementation for testing
+type testSignal struct {
+	signalType string
+	userID     string
+	timestamp  time.Time
+	metadata   map[string]interface{}
+	context    *PlayerContext
+}
+
+func (s *testSignal) Type() string                     { return s.signalType }
+func (s *testSignal) UserID() string                   { return s.userID }
+func (s *testSignal) Timestamp() time.Time             { return s.timestamp }
+func (s *testSignal) Metadata() map[string]interface{} { return s.metadata }
+func (s *testSignal) Context() *PlayerContext          { return s.context }
+
 // Test event processor implementations
 type testOAuthEventProcessor struct{}
 
@@ -95,7 +110,7 @@ func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}
 	metadata := map[string]interface{}{
 		"event": "oauth_token_generated",
 	}
-	return &BaseSignal{
+	return &testSignal{
 		signalType: "login",
 		userID:     userID,
 		timestamp:  time.Now(),
@@ -161,7 +176,7 @@ func (m *testRageQuitMapper) MapToSignal(userID string, timestamp time.Time, val
 		"quit_count": int(value),
 		"stat_code":  "rse-rage-quit",
 	}
-	return &BaseSignal{
+	return &testSignal{
 		signalType: "rage_quit",
 		userID:     userID,
 		timestamp:  timestamp,
@@ -181,7 +196,7 @@ func (m *testMatchWinMapper) MapToSignal(userID string, timestamp time.Time, val
 		"total_wins": int(value),
 		"stat_code":  "rse-match-wins",
 	}
-	return &BaseSignal{
+	return &testSignal{
 		signalType: "match_win",
 		userID:     userID,
 		timestamp:  timestamp,
@@ -201,7 +216,7 @@ func (m *testLosingStreakMapper) MapToSignal(userID string, timestamp time.Time,
 		"current_streak": int(value),
 		"stat_code":      "rse-current-losing-streak",
 	}
-	return &BaseSignal{
+	return &testSignal{
 		signalType: "losing_streak",
 		userID:     userID,
 		timestamp:  timestamp,

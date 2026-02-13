@@ -24,7 +24,11 @@ func (m *RageQuitMapper) MapToSignal(userID string, timestamp time.Time, value f
 
 // RageQuitSignal represents a player rage quitting.
 type RageQuitSignal struct {
-	signal.BaseSignal
+	signalType   string
+	userID       string
+	timestamp    time.Time
+	metadata     map[string]interface{}
+	context      *signal.PlayerContext
 	QuitCount    int
 	MatchContext map[string]interface{}
 }
@@ -36,8 +40,37 @@ func NewRageQuitSignal(userID string, timestamp time.Time, quitCount int, contex
 		"stat_code":  "rse-rage-quit",
 	}
 	return &RageQuitSignal{
-		BaseSignal:   signal.NewBaseSignal(TypeRageQuit, userID, timestamp, metadata, context),
+		signalType:   TypeRageQuit,
+		userID:       userID,
+		timestamp:    timestamp,
+		metadata:     metadata,
+		context:      context,
 		QuitCount:    quitCount,
 		MatchContext: make(map[string]interface{}),
 	}
+}
+
+// Type implements Signal interface.
+func (s *RageQuitSignal) Type() string {
+	return s.signalType
+}
+
+// UserID implements Signal interface.
+func (s *RageQuitSignal) UserID() string {
+	return s.userID
+}
+
+// Timestamp implements Signal interface.
+func (s *RageQuitSignal) Timestamp() time.Time {
+	return s.timestamp
+}
+
+// Metadata implements Signal interface.
+func (s *RageQuitSignal) Metadata() map[string]interface{} {
+	return s.metadata
+}
+
+// Context implements Signal interface.
+func (s *RageQuitSignal) Context() *signal.PlayerContext {
+	return s.context
 }
