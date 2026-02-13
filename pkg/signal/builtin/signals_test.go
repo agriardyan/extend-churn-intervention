@@ -89,7 +89,7 @@ func TestLossSignal(t *testing.T) {
 		State:  &state.ChurnState{},
 	}
 
-	sig := NewLossSignal("user123", timestamp, 7, playerCtx)
+	sig := NewLosingStreakSignal("user123", timestamp, 7, playerCtx)
 
 	if sig.Type() != TypeLosingStreak {
 		t.Errorf("Expected type '%s', got '%s'", TypeLosingStreak, sig.Type())

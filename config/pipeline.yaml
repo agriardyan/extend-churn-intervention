@@ -7,12 +7,9 @@ rules:
   - id: rage-quit
     type: rage_quit
     enabled: true
-    actions: [comeback-challenge, grant-item]  # Actions to execute when triggered
+    actions: [comeback-challenge]  # Actions to execute when triggered
     parameters:
       threshold: 3  # Number of consecutive losses before triggering
-    cooldown:
-      duration: 24h  # Don't trigger again for 24 hours
-      per_user: true
 
   # Losing Streak Rule - Detects extended losing streaks
   - id: losing-streak
@@ -21,9 +18,6 @@ rules:
     actions: [comeback-challenge]  # Same actions as rage quit
     parameters:
       threshold: 5  # Number of consecutive losses
-    cooldown:
-      duration: 48h
-      per_user: true
 
   # Session Decline Rule - Detects significant drop in play sessions
   - id: session-decline
@@ -33,9 +27,19 @@ rules:
     parameters:
       decline_threshold: 0.5  # 50% decline from last week
       min_sessions_last_week: 3  # Minimum sessions last week to qualify
-    cooldown:
-      duration: 168h  # 7 days
-      per_user: true
+
+  # Challenge Completion Rule - Grants item upon challenge completion
+  # This rule listens for challenge completion events. When a player
+  # completes the comeback challenge, they are rewarded with an item.
+  # The rule should check whether user has the challenge. 
+  # Normally challenge created by rules like losing_streak, rage_quit, session_decline.
+  - id: challenge-completion
+    type: challenge_completion
+    enabled: true
+    actions: [grant-item]  # Grant item upon challenge completion
+    parameters:
+      wins_needed: 3
+      challenge_id: comeback-challenge
 
 # Actions are executed when rules trigger
 actions:

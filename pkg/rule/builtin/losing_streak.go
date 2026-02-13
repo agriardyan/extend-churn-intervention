@@ -60,7 +60,7 @@ func (r *LosingStreakRule) Config() rule.RuleConfig {
 // Evaluate checks if the player has reached the losing streak threshold.
 func (r *LosingStreakRule) Evaluate(ctx context.Context, sig signal.Signal) (bool, *rule.Trigger, error) {
 	// Type assert to LossSignal
-	lossSig, ok := sig.(*signalBuiltin.LossSignal)
+	lossSig, ok := sig.(*signalBuiltin.LosingStreakSignal)
 	if !ok {
 		return false, nil, fmt.Errorf("expected LossSignal, got %T", sig)
 	}

@@ -21,13 +21,6 @@ type RuleConfig struct {
 	Enabled    bool                   `yaml:"enabled"`
 	Actions    []string               `yaml:"actions,omitempty"` // Action IDs to execute when rule triggers
 	Parameters map[string]interface{} `yaml:"parameters,omitempty"`
-	Cooldown   *CooldownConfig        `yaml:"cooldown,omitempty"`
-}
-
-// CooldownConfig represents cooldown configuration for a rule.
-type CooldownConfig struct {
-	Duration string `yaml:"duration"` // e.g., "24h", "7d"
-	PerUser  bool   `yaml:"per_user"`
 }
 
 // ActionConfig represents an action configuration entry.

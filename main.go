@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
 	actionBuiltin "github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
@@ -163,20 +162,6 @@ func main() {
 			Type:       rc.Type,
 			Enabled:    rc.Enabled,
 			Parameters: rc.Parameters,
-		}
-		if rc.Cooldown != nil {
-			duration, err := time.ParseDuration(rc.Cooldown.Duration)
-			if err != nil {
-				logrus.Fatalf("invalid cooldown duration for rule %s: %v", rc.ID, err)
-			}
-			scope := "global"
-			if rc.Cooldown.PerUser {
-				scope = "per_user"
-			}
-			ruleConfigs[i].Cooldown = &rule.CooldownConfig{
-				Duration: duration,
-				Scope:    scope,
-			}
 		}
 	}
 

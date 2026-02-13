@@ -15,16 +15,16 @@ import (
 // Manager orchestrates the complete anti-churn pipeline:
 // Event → Signal → Rules → Actions
 type Manager struct {
-	processor   *signal.Processor
-	engine      *rule.Engine
-	executor    *action.Executor
-	ruleActions map[string][]string // Maps rule ID to action IDs
-	logger      *slog.Logger
+	signalProcessor *signal.Processor
+	engine          *rule.Engine
+	executor        *action.Executor
+	ruleActions     map[string][]string // Maps rule ID to action IDs
+	logger          *slog.Logger
 }
 
 // NewManager creates a new pipeline manager with all required components.
 // ruleActions maps rule IDs to the action IDs they should trigger.
-func NewManager(processor *signal.Processor, engine *rule.Engine, executor *action.Executor, ruleActions map[string][]string, logger *slog.Logger) *Manager {
+func NewManager(signalProcessor *signal.Processor, engine *rule.Engine, executor *action.Executor, ruleActions map[string][]string, logger *slog.Logger) *Manager {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -34,11 +34,11 @@ func NewManager(processor *signal.Processor, engine *rule.Engine, executor *acti
 	}
 
 	return &Manager{
-		processor:   processor,
-		engine:      engine,
-		executor:    executor,
-		ruleActions: ruleActions,
-		logger:      logger,
+		signalProcessor: signalProcessor,
+		engine:          engine,
+		executor:        executor,
+		ruleActions:     ruleActions,
+		logger:          logger,
 	}
 }
 
@@ -50,7 +50,7 @@ func (m *Manager) ProcessOAuthEvent(ctx context.Context, event *asyncapi_iam.Oau
 		slog.String("namespace", event.GetNamespace()))
 
 	// Step 1: Convert event to signal
-	sig, err := m.processor.ProcessOAuthEvent(ctx, event)
+	sig, err := m.signalProcessor.ProcessOAuthEvent(ctx, event)
 	if err != nil {
 		m.logger.Error("failed to process OAuth event to signal",
 			slog.String("user_id", event.GetUserId()),
@@ -80,7 +80,7 @@ func (m *Manager) ProcessStatEvent(ctx context.Context, event *asyncapi_social.S
 		slog.String("stat_code", event.GetPayload().GetStatCode()))
 
 	// Step 1: Convert event to signal
-	sig, err := m.processor.ProcessStatEvent(ctx, event)
+	sig, err := m.signalProcessor.ProcessStatEvent(ctx, event)
 	if err != nil {
 		m.logger.Error("failed to process stat event to signal",
 			slog.String("user_id", event.GetUserId()),

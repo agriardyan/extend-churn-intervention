@@ -165,7 +165,7 @@ func TestLosingStreakRule_Evaluate(t *testing.T) {
 				UserID: "test-user",
 				State:  &state.ChurnState{},
 			}
-			sig := signalBuiltin.NewLossSignal("test-user", time.Now(), int(tt.statValue), playerCtx)
+			sig := signalBuiltin.NewLosingStreakSignal("test-user", time.Now(), int(tt.statValue), playerCtx)
 
 			matched, trigger, err := rule.Evaluate(context.Background(), sig)
 			if err != nil {
