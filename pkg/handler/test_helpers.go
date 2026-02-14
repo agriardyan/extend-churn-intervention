@@ -25,7 +25,11 @@ func setupTestPipeline(namespace string, mr *miniredis.Miniredis) *pipeline.Mana
 	processor := signal.NewProcessor(stateStore, namespace)
 
 	// Register builtin event processors
-	signalBuiltin.RegisterEventProcessors(processor.GetEventProcessorRegistry())
+	signalBuiltin.RegisterEventProcessors(
+		processor.GetEventProcessorRegistry(),
+		processor.GetStateStore(),
+		processor.GetNamespace(),
+	)
 
 	// Create rule registry and engine
 	ruleRegistry := rule.NewRegistry()

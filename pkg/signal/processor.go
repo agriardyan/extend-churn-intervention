@@ -32,36 +32,16 @@ func (p *Processor) GetEventProcessorRegistry() *EventProcessorRegistry {
 	return p.eventProcessorRegistry
 }
 
-// Load implements PlayerContextLoader interface.
-// This allows event processors to load player context.
-func (p *Processor) Load(ctx context.Context, userID string) (*PlayerContext, error) {
-	// Load player state from store
-	churnState, err := p.stateStore.GetChurnState(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get churn state: %w", err)
-	}
-
-	// Build player context
-	playerContext := &PlayerContext{
-		UserID:      userID,
-		State:       churnState,
-		Namespace:   p.namespace,
-		SessionInfo: make(map[string]interface{}),
-	}
-
-	// Add session metadata
-	playerContext.SessionInfo["sessions_this_week"] = churnState.Sessions.ThisWeek
-	playerContext.SessionInfo["sessions_last_week"] = churnState.Sessions.LastWeek
-	playerContext.SessionInfo["challenge_active"] = churnState.Challenge.Active
-	playerContext.SessionInfo["on_cooldown"] = time.Now().Before(churnState.Intervention.CooldownUntil)
-
-	return playerContext, nil
-}
-
 // GetStateStore returns the state store used by this processor.
-// This is useful for testing and direct state access.
+// This is useful for passing to event processors that need state access.
 func (p *Processor) GetStateStore() service.StateStore {
 	return p.stateStore
+}
+
+// GetNamespace returns the namespace for this processor.
+// This is useful for passing to event processors that need namespace.
+func (p *Processor) GetNamespace() string {
+	return p.namespace
 }
 
 // ProcessEvent processes any event type using registered event processors.
@@ -72,7 +52,7 @@ func (p *Processor) ProcessEvent(ctx context.Context, eventType string, event in
 		return nil, fmt.Errorf("no event processor registered for event type '%s'", eventType)
 	}
 
-	return processor.Process(ctx, event, p)
+	return processor.Process(ctx, event)
 }
 
 // ProcessOAuthEvent processes OAuth token events (convenience wrapper).
@@ -106,14 +86,15 @@ func (p *Processor) ProcessStatEvent(ctx context.Context, event *statistic.StatI
 	// Route to stat-code-specific processor if registered
 	processor := p.eventProcessorRegistry.Get(statCode)
 	if processor != nil {
-		return processor.Process(ctx, event, p)
+		return processor.Process(ctx, event)
 	}
 
 	// Fallback: load context and create generic stat update signal
-	playerCtx, err := p.Load(ctx, userID)
+	churnState, err := p.stateStore.GetChurnState(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load player context for user %s: %w", userID, err)
+		return nil, fmt.Errorf("failed to load churn state for user %s: %w", userID, err)
 	}
 
+	playerCtx := BuildPlayerContext(userID, p.namespace, churnState)
 	return NewStatUpdateSignal(userID, time.Now(), statCode, payload.GetLatestValue(), playerCtx), nil
 }

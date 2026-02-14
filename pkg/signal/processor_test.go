@@ -56,11 +56,11 @@ func setupTestProcessor(stores ...service.StateStore) *Processor {
 	}
 	processor := NewProcessor(store, "test-namespace")
 
-	// Register test event processors
-	processor.GetEventProcessorRegistry().Register(&testOAuthEventProcessor{})
-	processor.GetEventProcessorRegistry().Register(&testRageQuitEventProcessor{})
-	processor.GetEventProcessorRegistry().Register(&testMatchWinEventProcessor{})
-	processor.GetEventProcessorRegistry().Register(&testLosingStreakEventProcessor{})
+	// Register test event processors with dependencies
+	processor.GetEventProcessorRegistry().Register(&testOAuthEventProcessor{stateStore: store, namespace: "test-namespace"})
+	processor.GetEventProcessorRegistry().Register(&testRageQuitEventProcessor{stateStore: store, namespace: "test-namespace"})
+	processor.GetEventProcessorRegistry().Register(&testMatchWinEventProcessor{stateStore: store, namespace: "test-namespace"})
+	processor.GetEventProcessorRegistry().Register(&testLosingStreakEventProcessor{stateStore: store, namespace: "test-namespace"})
 
 	return processor
 }
@@ -81,13 +81,16 @@ func (s *testSignal) Metadata() map[string]interface{} { return s.metadata }
 func (s *testSignal) Context() *PlayerContext          { return s.context }
 
 // Test event processor implementations
-type testOAuthEventProcessor struct{}
+type testOAuthEventProcessor struct {
+	stateStore service.StateStore
+	namespace  string
+}
 
 func (p *testOAuthEventProcessor) EventType() string {
 	return "oauth_token_generated"
 }
 
-func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
+func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}) (Signal, error) {
 	oauthEvent, ok := event.(*oauth.OauthTokenGenerated)
 	if !ok {
 		return nil, fmt.Errorf("expected *oauth.OauthTokenGenerated, got %T", event)
@@ -98,10 +101,12 @@ func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}
 		return nil, fmt.Errorf("user ID is empty")
 	}
 
-	playerCtx, err := contextLoader.Load(ctx, userID)
+	churnState, err := p.stateStore.GetChurnState(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
+
+	playerCtx := BuildPlayerContext(userID, p.namespace, churnState)
 
 	metadata := map[string]interface{}{
 		"event": "oauth_token_generated",
@@ -116,13 +121,16 @@ func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}
 }
 
 // testRageQuitEventProcessor processes "rse-rage-quit" stat events for testing.
-type testRageQuitEventProcessor struct{}
+type testRageQuitEventProcessor struct {
+	stateStore service.StateStore
+	namespace  string
+}
 
 func (p *testRageQuitEventProcessor) EventType() string {
 	return "rse-rage-quit"
 }
 
-func (p *testRageQuitEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
+func (p *testRageQuitEventProcessor) Process(ctx context.Context, event interface{}) (Signal, error) {
 	statEvent, ok := event.(*statistic.StatItemUpdated)
 	if !ok {
 		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
@@ -133,10 +141,12 @@ func (p *testRageQuitEventProcessor) Process(ctx context.Context, event interfac
 		return nil, fmt.Errorf("user ID is empty")
 	}
 
-	playerCtx, err := contextLoader.Load(ctx, userID)
+	churnState, err := p.stateStore.GetChurnState(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
+
+	playerCtx := BuildPlayerContext(userID, p.namespace, churnState)
 
 	value := statEvent.GetPayload().GetLatestValue()
 	metadata := map[string]interface{}{
@@ -153,13 +163,16 @@ func (p *testRageQuitEventProcessor) Process(ctx context.Context, event interfac
 }
 
 // testMatchWinEventProcessor processes "rse-match-wins" stat events for testing.
-type testMatchWinEventProcessor struct{}
+type testMatchWinEventProcessor struct {
+	stateStore service.StateStore
+	namespace  string
+}
 
 func (p *testMatchWinEventProcessor) EventType() string {
 	return "rse-match-wins"
 }
 
-func (p *testMatchWinEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
+func (p *testMatchWinEventProcessor) Process(ctx context.Context, event interface{}) (Signal, error) {
 	statEvent, ok := event.(*statistic.StatItemUpdated)
 	if !ok {
 		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
@@ -170,10 +183,12 @@ func (p *testMatchWinEventProcessor) Process(ctx context.Context, event interfac
 		return nil, fmt.Errorf("user ID is empty")
 	}
 
-	playerCtx, err := contextLoader.Load(ctx, userID)
+	churnState, err := p.stateStore.GetChurnState(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
+
+	playerCtx := BuildPlayerContext(userID, p.namespace, churnState)
 
 	value := statEvent.GetPayload().GetLatestValue()
 	metadata := map[string]interface{}{
@@ -190,13 +205,16 @@ func (p *testMatchWinEventProcessor) Process(ctx context.Context, event interfac
 }
 
 // testLosingStreakEventProcessor processes "rse-current-losing-streak" stat events for testing.
-type testLosingStreakEventProcessor struct{}
+type testLosingStreakEventProcessor struct {
+	stateStore service.StateStore
+	namespace  string
+}
 
 func (p *testLosingStreakEventProcessor) EventType() string {
 	return "rse-current-losing-streak"
 }
 
-func (p *testLosingStreakEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
+func (p *testLosingStreakEventProcessor) Process(ctx context.Context, event interface{}) (Signal, error) {
 	statEvent, ok := event.(*statistic.StatItemUpdated)
 	if !ok {
 		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
@@ -207,10 +225,12 @@ func (p *testLosingStreakEventProcessor) Process(ctx context.Context, event inte
 		return nil, fmt.Errorf("user ID is empty")
 	}
 
-	playerCtx, err := contextLoader.Load(ctx, userID)
+	churnState, err := p.stateStore.GetChurnState(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
+
+	playerCtx := BuildPlayerContext(userID, p.namespace, churnState)
 
 	value := statEvent.GetPayload().GetLatestValue()
 	metadata := map[string]interface{}{
@@ -457,64 +477,6 @@ func TestProcessor_ProcessStatEvent_EmptyStatCode(t *testing.T) {
 	}
 }
 
-func TestProcessor_LoadPlayerContext(t *testing.T) {
-	store := newMockStateStore()
-
-	// Set up existing state
-	existingState := &state.ChurnState{
-		Sessions: state.SessionState{
-			ThisWeek:  5,
-			LastWeek:  10,
-			LastReset: time.Now().Add(-24 * time.Hour),
-		},
-		Challenge: state.ChallengeState{
-			Active:      true,
-			WinsNeeded:  3,
-			WinsCurrent: 1,
-		},
-		Intervention: state.InterventionState{
-			CooldownUntil: time.Now().Add(24 * time.Hour),
-		},
-	}
-	store.states["test-user"] = existingState
-
-	processor := NewProcessor(store, "test-namespace")
-
-	ctx, err := processor.Load(context.Background(), "test-user")
-	if err != nil {
-		t.Fatalf("Failed to load player context: %v", err)
-	}
-
-	if ctx.UserID != "test-user" {
-		t.Errorf("Expected user ID 'test-user', got '%s'", ctx.UserID)
-	}
-
-	if ctx.Namespace != "test-namespace" {
-		t.Errorf("Expected namespace 'test-namespace', got '%s'", ctx.Namespace)
-	}
-
-	if ctx.State.Sessions.ThisWeek != 5 {
-		t.Errorf("Expected sessions this week 5, got %d", ctx.State.Sessions.ThisWeek)
-	}
-
-	if ctx.State.Sessions.LastWeek != 10 {
-		t.Errorf("Expected sessions last week 10, got %d", ctx.State.Sessions.LastWeek)
-	}
-
-	// Check session info metadata
-	if ctx.SessionInfo["sessions_this_week"] != 5 {
-		t.Errorf("Expected session info this week 5, got %v", ctx.SessionInfo["sessions_this_week"])
-	}
-
-	if ctx.SessionInfo["challenge_active"] != true {
-		t.Errorf("Expected challenge_active true, got %v", ctx.SessionInfo["challenge_active"])
-	}
-
-	if ctx.SessionInfo["on_cooldown"] != true {
-		t.Errorf("Expected on_cooldown true, got %v", ctx.SessionInfo["on_cooldown"])
-	}
-}
-
 // Test error handling when state store fails
 type errorStateStore struct{}
 
@@ -528,7 +490,7 @@ func (e *errorStateStore) UpdateChurnState(ctx context.Context, userID string, c
 
 func TestProcessor_ProcessOAuthEvent_StateStoreError(t *testing.T) {
 	store := &errorStateStore{}
-	processor := NewProcessor(store, "test-namespace")
+	processor := setupTestProcessor(store)
 
 	event := &oauth.OauthTokenGenerated{}
 	event.UserId = "test-user"
@@ -541,11 +503,11 @@ func TestProcessor_ProcessOAuthEvent_StateStoreError(t *testing.T) {
 
 func TestProcessor_ProcessStatEvent_StateStoreError(t *testing.T) {
 	store := &errorStateStore{}
-	processor := NewProcessor(store, "test-namespace")
+	processor := setupTestProcessor(store)
 
 	event := &statistic.StatItemUpdated{
+		UserId: "test-user",
 		Payload: &statistic.StatItem{
-			UserId:      "test-user",
 			StatCode:    "rse-rage-quit",
 			LatestValue: 3.0,
 		},

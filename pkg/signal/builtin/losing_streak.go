@@ -6,6 +6,7 @@ import (
 	"time"
 
 	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 )
 
@@ -15,13 +16,24 @@ const (
 )
 
 // LosingStreakEventProcessor processes "rse-current-losing-streak" stat events into LosingStreakSignal.
-type LosingStreakEventProcessor struct{}
+type LosingStreakEventProcessor struct {
+	stateStore service.StateStore
+	namespace  string
+}
+
+// NewLosingStreakEventProcessor creates a new losing streak event processor.
+func NewLosingStreakEventProcessor(stateStore service.StateStore, namespace string) *LosingStreakEventProcessor {
+	return &LosingStreakEventProcessor{
+		stateStore: stateStore,
+		namespace:  namespace,
+	}
+}
 
 func (p *LosingStreakEventProcessor) EventType() string {
 	return "rse-current-losing-streak"
 }
 
-func (p *LosingStreakEventProcessor) Process(ctx context.Context, event interface{}, loader signal.PlayerContextLoader) (signal.Signal, error) {
+func (p *LosingStreakEventProcessor) Process(ctx context.Context, event interface{}) (signal.Signal, error) {
 	statEvent, ok := event.(*statistic.StatItemUpdated)
 	if !ok {
 		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
@@ -30,10 +42,13 @@ func (p *LosingStreakEventProcessor) Process(ctx context.Context, event interfac
 	userID := statEvent.GetUserId()
 	value := statEvent.GetPayload().GetLatestValue()
 
-	playerCtx, err := loader.Load(ctx, userID)
+	// Load player state
+	churnState, err := p.stateStore.GetChurnState(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load player context: %w", err)
+		return nil, fmt.Errorf("failed to load churn state for user %s: %w", userID, err)
 	}
+
+	playerCtx := signal.BuildPlayerContext(userID, p.namespace, churnState)
 
 	return NewLosingStreakSignal(userID, time.Now(), int(value), playerCtx), nil
 }

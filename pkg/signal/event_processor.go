@@ -13,14 +13,9 @@ type EventProcessor interface {
 	// Examples: "oauth_token_generated", "stat_item_updated"
 	EventType() string
 
-	// Process converts a raw event into a signal with enriched context.
-	Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error)
-}
-
-// PlayerContextLoader provides player context for event processing.
-// This allows event processors to enrich signals without direct state store access.
-type PlayerContextLoader interface {
-	Load(ctx context.Context, userID string) (*PlayerContext, error)
+	// Process converts a raw event into a signal.
+	// Processors are responsible for loading any required context or state.
+	Process(ctx context.Context, event interface{}) (Signal, error)
 }
 
 // EventProcessorRegistry manages registered event processors.

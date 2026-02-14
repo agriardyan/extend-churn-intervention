@@ -138,7 +138,11 @@ func main() {
 	// DEVELOPER: Register your event processors here.
 	// Each event processor handles a specific event type or stat code.
 	// ============================================================
-	signalBuiltin.RegisterEventProcessors(processor.GetEventProcessorRegistry())
+	signalBuiltin.RegisterEventProcessors(
+		processor.GetEventProcessorRegistry(),
+		processor.GetStateStore(),
+		processor.GetNamespace(),
+	)
 	logrus.Infof("initialized signal processor with %d event processors",
 		processor.GetEventProcessorRegistry().Count())
 

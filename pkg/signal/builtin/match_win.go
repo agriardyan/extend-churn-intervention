@@ -6,6 +6,7 @@ import (
 	"time"
 
 	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 )
 
@@ -14,13 +15,24 @@ const (
 )
 
 // MatchWinEventProcessor processes "rse-match-wins" stat events into WinSignal.
-type MatchWinEventProcessor struct{}
+type MatchWinEventProcessor struct {
+	stateStore service.StateStore
+	namespace  string
+}
+
+// NewMatchWinEventProcessor creates a new match win event processor.
+func NewMatchWinEventProcessor(stateStore service.StateStore, namespace string) *MatchWinEventProcessor {
+	return &MatchWinEventProcessor{
+		stateStore: stateStore,
+		namespace:  namespace,
+	}
+}
 
 func (p *MatchWinEventProcessor) EventType() string {
 	return "rse-match-wins"
 }
 
-func (p *MatchWinEventProcessor) Process(ctx context.Context, event interface{}, loader signal.PlayerContextLoader) (signal.Signal, error) {
+func (p *MatchWinEventProcessor) Process(ctx context.Context, event interface{}) (signal.Signal, error) {
 	statEvent, ok := event.(*statistic.StatItemUpdated)
 	if !ok {
 		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
@@ -29,10 +41,13 @@ func (p *MatchWinEventProcessor) Process(ctx context.Context, event interface{},
 	userID := statEvent.GetUserId()
 	value := statEvent.GetPayload().GetLatestValue()
 
-	playerCtx, err := loader.Load(ctx, userID)
+	// Load player state
+	churnState, err := p.stateStore.GetChurnState(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load player context: %w", err)
+		return nil, fmt.Errorf("failed to load churn state for user %s: %w", userID, err)
 	}
+
+	playerCtx := signal.BuildPlayerContext(userID, p.namespace, churnState)
 
 	return NewWinSignal(userID, time.Now(), int(value), playerCtx), nil
 }

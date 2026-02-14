@@ -21,7 +21,11 @@ func setupTestProcessor(stateStore service.StateStore) *signal.Processor {
 	processor := signal.NewProcessor(stateStore, "test-namespace")
 
 	// Register builtin event processors
-	signalBuiltin.RegisterEventProcessors(processor.GetEventProcessorRegistry())
+	signalBuiltin.RegisterEventProcessors(
+		processor.GetEventProcessorRegistry(),
+		processor.GetStateStore(),
+		processor.GetNamespace(),
+	)
 
 	return processor
 }
