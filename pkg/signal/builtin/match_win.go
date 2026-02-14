@@ -1,8 +1,11 @@
-package examples
+package builtin
 
 import (
+	"context"
+	"fmt"
 	"time"
 
+	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 )
 
@@ -10,15 +13,28 @@ const (
 	TypeMatchWin = "match_win"
 )
 
-// MatchWinMapper maps "rse-match-wins" stat events to WinSignal.
-type MatchWinMapper struct{}
+// MatchWinEventProcessor processes "rse-match-wins" stat events into WinSignal.
+type MatchWinEventProcessor struct{}
 
-func (m *MatchWinMapper) StatCode() string {
+func (p *MatchWinEventProcessor) EventType() string {
 	return "rse-match-wins"
 }
 
-func (m *MatchWinMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *signal.PlayerContext) signal.Signal {
-	return NewWinSignal(userID, timestamp, int(value), context)
+func (p *MatchWinEventProcessor) Process(ctx context.Context, event interface{}, loader signal.PlayerContextLoader) (signal.Signal, error) {
+	statEvent, ok := event.(*statistic.StatItemUpdated)
+	if !ok {
+		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
+	}
+
+	userID := statEvent.GetUserId()
+	value := statEvent.GetPayload().GetLatestValue()
+
+	playerCtx, err := loader.Load(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load player context: %w", err)
+	}
+
+	return NewWinSignal(userID, time.Now(), int(value), playerCtx), nil
 }
 
 // WinSignal represents a player winning a match.

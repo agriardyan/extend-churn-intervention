@@ -13,7 +13,6 @@ import (
 // Processor converts raw events into domain signals with enriched context.
 type Processor struct {
 	stateStore             service.StateStore
-	mapperRegistry         *MapperRegistry
 	eventProcessorRegistry *EventProcessorRegistry
 	namespace              string
 }
@@ -22,16 +21,9 @@ type Processor struct {
 func NewProcessor(stateStore service.StateStore, namespace string) *Processor {
 	return &Processor{
 		stateStore:             stateStore,
-		mapperRegistry:         NewMapperRegistry(),
 		eventProcessorRegistry: NewEventProcessorRegistry(),
 		namespace:              namespace,
 	}
-}
-
-// GetMapperRegistry returns the mapper registry for this processor.
-// This allows registering custom signal mappers.
-func (p *Processor) GetMapperRegistry() *MapperRegistry {
-	return p.mapperRegistry
 }
 
 // GetEventProcessorRegistry returns the event processor registry.
@@ -83,12 +75,45 @@ func (p *Processor) ProcessEvent(ctx context.Context, eventType string, event in
 	return processor.Process(ctx, event, p)
 }
 
-// ProcessOAuthEvent processes OAuth token events (convenience wrapper for backward compatibility).
+// ProcessOAuthEvent processes OAuth token events (convenience wrapper).
 func (p *Processor) ProcessOAuthEvent(ctx context.Context, event *oauth.OauthTokenGenerated) (Signal, error) {
 	return p.ProcessEvent(ctx, "oauth_token_generated", event)
 }
 
-// ProcessStatEvent processes statistic update events (convenience wrapper for backward compatibility).
+// ProcessStatEvent processes statistic update events.
+// Routes to stat-code-specific event processors if registered,
+// otherwise falls back to a generic StatUpdateSignal.
 func (p *Processor) ProcessStatEvent(ctx context.Context, event *statistic.StatItemUpdated) (Signal, error) {
-	return p.ProcessEvent(ctx, "stat_item_updated", event)
+	if event == nil {
+		return nil, fmt.Errorf("stat event is nil")
+	}
+
+	payload := event.GetPayload()
+	if payload == nil {
+		return nil, fmt.Errorf("stat event payload is nil")
+	}
+
+	userID := event.GetUserId()
+	statCode := payload.GetStatCode()
+
+	if userID == "" {
+		return nil, fmt.Errorf("user ID is empty in stat event")
+	}
+	if statCode == "" {
+		return nil, fmt.Errorf("stat code is empty in stat event")
+	}
+
+	// Route to stat-code-specific processor if registered
+	processor := p.eventProcessorRegistry.Get(statCode)
+	if processor != nil {
+		return processor.Process(ctx, event, p)
+	}
+
+	// Fallback: load context and create generic stat update signal
+	playerCtx, err := p.Load(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load player context for user %s: %w", userID, err)
+	}
+
+	return NewStatUpdateSignal(userID, time.Now(), statCode, payload.GetLatestValue(), playerCtx), nil
 }

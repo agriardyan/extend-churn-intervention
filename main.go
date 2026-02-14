@@ -14,17 +14,17 @@ import (
 	"syscall"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	actionExamples "github.com/AccelByte/extends-anti-churn/pkg/action/examples"
+	actionBuiltin "github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/common"
 	"github.com/AccelByte/extends-anti-churn/pkg/handler"
 	pb_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
 	pb_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	ruleExamples "github.com/AccelByte/extends-anti-churn/pkg/rule/examples"
+	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	signalPkg "github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
@@ -134,16 +134,13 @@ func main() {
 	)
 	processor := signalPkg.NewProcessor(redisStateStore, namespace)
 
-	// Register signal mappers
-	signalExamples.RegisterEventMappers(processor.GetMapperRegistry())
-	logrus.Infof("initialized signal processor with %d mappers", processor.GetMapperRegistry().Count())
-
-	// Register event processors
-	signalExamples.RegisterEventProcessors(
-		processor.GetEventProcessorRegistry(),
-		processor.GetMapperRegistry(),
-	)
-	logrus.Infof("initialized signal processor with %d event processors", processor.GetEventProcessorRegistry().Count())
+	// ============================================================
+	// DEVELOPER: Register your event processors here.
+	// Each event processor handles a specific event type or stat code.
+	// ============================================================
+	signalBuiltin.RegisterEventProcessors(processor.GetEventProcessorRegistry())
+	logrus.Infof("initialized signal processor with %d event processors",
+		processor.GetEventProcessorRegistry().Count())
 
 	// Convert pipeline rule configs to rule package configs
 	ruleConfigs := make([]rule.RuleConfig, len(pipelineConfig.Rules))
@@ -156,13 +153,11 @@ func main() {
 		}
 	}
 
-	// Initialize rule dependencies (services for external data)
-	// Currently nil - services will be added as needed per rule
-	// Future: Add services as they're implemented
-	ruleDeps := service.NewDependencies()
-
-	// Register rule types
-	ruleExamples.RegisterRules(ruleDeps)
+	// ============================================================
+	// DEVELOPER: Register your rule types here.
+	// Each rule type defines how to evaluate a signal.
+	// ============================================================
+	ruleBuiltin.RegisterRules()
 
 	// Initialize rule registry and register rules
 	ruleRegistry := rule.NewRegistry()
@@ -178,8 +173,10 @@ func main() {
 	// Initialize action registry and register actions
 	actionRegistry := action.NewRegistry()
 
-	// Set up dependencies for actions
-	// Create adapter for StateStore interface
+	// ============================================================
+	// DEVELOPER: Register your action types here.
+	// Set up dependencies and register action factories.
+	// ============================================================
 	fulfillmentService := platform.FulfillmentService{
 		Client:           factory.NewPlatformClient(configRepo),
 		ConfigRepository: configRepo,
@@ -191,11 +188,11 @@ func main() {
 			Namespace: namespace,
 		},
 	)
-	deps := &actionExamples.Dependencies{
+	deps := &actionBuiltin.Dependencies{
 		StateStore:         redisStateStore,
 		EntitlementGranter: itemGranter,
 	}
-	actionExamples.RegisterActions(deps)
+	actionBuiltin.RegisterActions(deps)
 
 	// Convert pipeline action configs to action package configs
 	actionConfigs := make([]action.ActionConfig, len(pipelineConfig.Actions))
@@ -231,7 +228,17 @@ func main() {
 	pipelineManager := pipeline.NewManager(processor, ruleEngine, actionExecutor, ruleActions, nil)
 	logrus.Infof("initialized pipeline manager")
 
-	// Register event listeners with pipeline manager
+	// Validate pipeline wiring - ensures all enabled rules and actions are registered
+	if err := pipeline.ValidateWiring(ruleRegistry, actionRegistry, pipelineConfig); err != nil {
+		logrus.Fatalf("pipeline wiring validation failed: %v", err)
+	}
+	logrus.Infof("pipeline wiring validation passed")
+
+	// ============================================================
+	// DEVELOPER: Register your gRPC event handlers here.
+	// Each handler receives events from a specific AGS service
+	// and passes them to the pipeline manager for processing.
+	// ============================================================
 	oauthListener := handler.NewOAuth(pipelineManager, namespace)
 	pb_iam.RegisterOauthTokenOauthTokenGeneratedServiceServer(s, oauthListener)
 

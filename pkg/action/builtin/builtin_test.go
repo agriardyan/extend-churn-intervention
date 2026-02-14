@@ -1,4 +1,4 @@
-package examples
+package builtin
 
 import (
 	"context"

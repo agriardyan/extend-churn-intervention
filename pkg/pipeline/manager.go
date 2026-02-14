@@ -42,63 +42,71 @@ func NewManager(signalProcessor *signal.Processor, engine *rule.Engine, executor
 	}
 }
 
-// ProcessOAuthEvent processes an OAuth event through the complete pipeline.
-// Returns any error encountered during pipeline execution.
-func (m *Manager) ProcessOAuthEvent(ctx context.Context, event *asyncapi_iam.OauthTokenGenerated) error {
-	m.logger.Info("processing OAuth event through pipeline",
-		slog.String("user_id", event.GetUserId()),
-		slog.String("namespace", event.GetNamespace()))
+// ProcessEvent processes any event through the complete pipeline.
+// eventType identifies which EventProcessor handles this event.
+// event is the raw protobuf message.
+func (m *Manager) ProcessEvent(ctx context.Context, eventType string, event interface{}) error {
+	m.logger.Info("processing event through pipeline",
+		slog.String("event_type", eventType))
 
 	// Step 1: Convert event to signal
-	sig, err := m.signalProcessor.ProcessOAuthEvent(ctx, event)
+	sig, err := m.signalProcessor.ProcessEvent(ctx, eventType, event)
 	if err != nil {
-		m.logger.Error("failed to process OAuth event to signal",
-			slog.String("user_id", event.GetUserId()),
+		m.logger.Error("failed to process event to signal",
+			slog.String("event_type", eventType),
 			slog.String("error", err.Error()))
 		return fmt.Errorf("signal processing failed: %w", err)
 	}
 
 	if sig == nil {
-		m.logger.Debug("OAuth event did not generate a signal, skipping pipeline")
+		m.logger.Debug("event did not generate a signal, skipping pipeline",
+			slog.String("event_type", eventType))
 		return nil
 	}
 
-	m.logger.Info("OAuth event converted to signal",
+	m.logger.Info("event converted to signal",
+		slog.String("event_type", eventType),
 		slog.String("signal_type", sig.Type()),
 		slog.String("user_id", sig.UserID()))
 
-	// Step 2: Evaluate rules
+	// Step 2: Evaluate rules and execute actions
+	return m.evaluateAndExecute(ctx, sig)
+}
+
+// ProcessOAuthEvent processes an OAuth event through the complete pipeline.
+// This is a convenience wrapper that delegates to the signal processor's typed method.
+func (m *Manager) ProcessOAuthEvent(ctx context.Context, event *asyncapi_iam.OauthTokenGenerated) error {
+	m.logger.Info("processing OAuth event through pipeline",
+		slog.String("user_id", event.GetUserId()))
+
+	sig, err := m.signalProcessor.ProcessOAuthEvent(ctx, event)
+	if err != nil {
+		return fmt.Errorf("signal processing failed: %w", err)
+	}
+
+	if sig == nil {
+		return nil
+	}
+
 	return m.evaluateAndExecute(ctx, sig)
 }
 
 // ProcessStatEvent processes a statistic event through the complete pipeline.
-// Returns any error encountered during pipeline execution.
+// This is a convenience wrapper that uses the signal processor's stat-code routing.
 func (m *Manager) ProcessStatEvent(ctx context.Context, event *asyncapi_social.StatItemUpdated) error {
 	m.logger.Info("processing stat event through pipeline",
 		slog.String("user_id", event.GetUserId()),
-		slog.String("namespace", event.GetNamespace()),
 		slog.String("stat_code", event.GetPayload().GetStatCode()))
 
-	// Step 1: Convert event to signal
 	sig, err := m.signalProcessor.ProcessStatEvent(ctx, event)
 	if err != nil {
-		m.logger.Error("failed to process stat event to signal",
-			slog.String("user_id", event.GetUserId()),
-			slog.String("stat_code", event.GetPayload().GetStatCode()),
-			slog.String("error", err.Error()))
 		return fmt.Errorf("signal processing failed: %w", err)
 	}
 
 	if sig == nil {
-		m.logger.Debug("stat event did not generate a signal, skipping pipeline")
 		return nil
 	}
 
-	m.logger.Info("stat event converted to signal",
-		slog.String("signal_type", sig.Type()),
-		slog.String("user_id", sig.UserID()))
-
-	// Step 2: Evaluate rules
 	return m.evaluateAndExecute(ctx, sig)
 }
 

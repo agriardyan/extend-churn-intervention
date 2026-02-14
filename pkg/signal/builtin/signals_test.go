@@ -1,4 +1,4 @@
-package examples
+package builtin
 
 import (
 	"testing"
@@ -15,17 +15,17 @@ func TestLoginSignal(t *testing.T) {
 		State:  &state.ChurnState{},
 	}
 
-	sig := NewOauthTokenGeneratedSignal("user123", timestamp, playerCtx)
+	sig := NewLoginSignal("user123", timestamp, playerCtx)
 
-	if sig.Type() != TypeOauthTokenGenerated {
-		t.Errorf("Expected type '%s', got '%s'", TypeOauthTokenGenerated, sig.Type())
+	if sig.Type() != TypeLogin {
+		t.Errorf("Expected type '%s', got '%s'", TypeLogin, sig.Type())
 	}
 
 	if sig.UserID() != "user123" {
 		t.Errorf("Expected userID 'user123', got '%s'", sig.UserID())
 	}
 
-	if sig.Metadata()["event"] != "oauth_token_generated" {
+	if sig.Metadata()["event"] != "login" {
 		t.Errorf("Expected event metadata")
 	}
 }

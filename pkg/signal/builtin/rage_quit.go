@@ -1,8 +1,11 @@
-package examples
+package builtin
 
 import (
+	"context"
+	"fmt"
 	"time"
 
+	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 )
 
@@ -11,15 +14,28 @@ const (
 	TypeRageQuit = "rage_quit"
 )
 
-// RageQuitMapper maps "rse-rage-quit" stat events to RageQuitSignal.
-type RageQuitMapper struct{}
+// RageQuitEventProcessor processes "rse-rage-quit" stat events into RageQuitSignal.
+type RageQuitEventProcessor struct{}
 
-func (m *RageQuitMapper) StatCode() string {
+func (p *RageQuitEventProcessor) EventType() string {
 	return "rse-rage-quit"
 }
 
-func (m *RageQuitMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *signal.PlayerContext) signal.Signal {
-	return NewRageQuitSignal(userID, timestamp, int(value), context)
+func (p *RageQuitEventProcessor) Process(ctx context.Context, event interface{}, loader signal.PlayerContextLoader) (signal.Signal, error) {
+	statEvent, ok := event.(*statistic.StatItemUpdated)
+	if !ok {
+		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
+	}
+
+	userID := statEvent.GetUserId()
+	value := statEvent.GetPayload().GetLatestValue()
+
+	playerCtx, err := loader.Load(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load player context: %w", err)
+	}
+
+	return NewRageQuitSignal(userID, time.Now(), int(value), playerCtx), nil
 }
 
 // RageQuitSignal represents a player rage quitting.

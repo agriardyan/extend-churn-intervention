@@ -1,4 +1,4 @@
-package examples
+package builtin
 
 import (
 	"github.com/AccelByte/extends-anti-churn/pkg/action"

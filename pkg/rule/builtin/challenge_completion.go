@@ -1,4 +1,4 @@
-package examples
+package builtin
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -55,7 +55,7 @@ func (r *ChallengeCompletionRule) Name() string {
 
 // SignalTypes returns the signal types this rule handles.
 func (r *ChallengeCompletionRule) SignalTypes() []string {
-	return []string{signalExamples.TypeMatchWin}
+	return []string{signalBuiltin.TypeMatchWin}
 }
 
 // Config returns the rule configuration.
@@ -66,7 +66,7 @@ func (r *ChallengeCompletionRule) Config() rule.RuleConfig {
 // Evaluate checks if the player has an active challenge and has achieved the required wins.
 func (r *ChallengeCompletionRule) Evaluate(ctx context.Context, sig signal.Signal) (bool, *rule.Trigger, error) {
 	// Type assert to WinSignal
-	winSig, ok := sig.(*signalExamples.WinSignal)
+	winSig, ok := sig.(*signalBuiltin.WinSignal)
 	if !ok {
 		return false, nil, fmt.Errorf("expected WinSignal, got %T", sig)
 	}

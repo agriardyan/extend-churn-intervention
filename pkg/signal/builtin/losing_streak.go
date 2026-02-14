@@ -1,8 +1,11 @@
-package examples
+package builtin
 
 import (
+	"context"
+	"fmt"
 	"time"
 
+	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 )
 
@@ -11,15 +14,28 @@ const (
 	TypeLosingStreak = "losing_streak"
 )
 
-// LosingStreakMapper maps "rse-current-losing-streak" stat events to LossSignal.
-type LosingStreakMapper struct{}
+// LosingStreakEventProcessor processes "rse-current-losing-streak" stat events into LosingStreakSignal.
+type LosingStreakEventProcessor struct{}
 
-func (m *LosingStreakMapper) StatCode() string {
+func (p *LosingStreakEventProcessor) EventType() string {
 	return "rse-current-losing-streak"
 }
 
-func (m *LosingStreakMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *signal.PlayerContext) signal.Signal {
-	return NewLosingStreakSignal(userID, timestamp, int(value), context)
+func (p *LosingStreakEventProcessor) Process(ctx context.Context, event interface{}, loader signal.PlayerContextLoader) (signal.Signal, error) {
+	statEvent, ok := event.(*statistic.StatItemUpdated)
+	if !ok {
+		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
+	}
+
+	userID := statEvent.GetUserId()
+	value := statEvent.GetPayload().GetLatestValue()
+
+	playerCtx, err := loader.Load(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load player context: %w", err)
+	}
+
+	return NewLosingStreakSignal(userID, time.Now(), int(value), playerCtx), nil
 }
 
 // LosingStreakSignal represents a player losing a match.

@@ -46,7 +46,7 @@ func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, ch
 	return nil
 }
 
-// setupTestProcessor creates a processor with builtin mappers and event processors registered
+// setupTestProcessor creates a processor with test event processors registered
 func setupTestProcessor(stores ...service.StateStore) *Processor {
 	var store service.StateStore
 	if len(stores) > 0 {
@@ -56,16 +56,11 @@ func setupTestProcessor(stores ...service.StateStore) *Processor {
 	}
 	processor := NewProcessor(store, "test-namespace")
 
-	// Register test mappers inline
-	processor.GetMapperRegistry().Register(&testRageQuitMapper{})
-	processor.GetMapperRegistry().Register(&testMatchWinMapper{})
-	processor.GetMapperRegistry().Register(&testLosingStreakMapper{})
-
-	// Register test event processors inline
+	// Register test event processors
 	processor.GetEventProcessorRegistry().Register(&testOAuthEventProcessor{})
-	processor.GetEventProcessorRegistry().Register(&testStatEventProcessor{
-		mapperRegistry: processor.GetMapperRegistry(),
-	})
+	processor.GetEventProcessorRegistry().Register(&testRageQuitEventProcessor{})
+	processor.GetEventProcessorRegistry().Register(&testMatchWinEventProcessor{})
+	processor.GetEventProcessorRegistry().Register(&testLosingStreakEventProcessor{})
 
 	return processor
 }
@@ -120,34 +115,22 @@ func (p *testOAuthEventProcessor) Process(ctx context.Context, event interface{}
 	}, nil
 }
 
-type testStatEventProcessor struct {
-	mapperRegistry *MapperRegistry
+// testRageQuitEventProcessor processes "rse-rage-quit" stat events for testing.
+type testRageQuitEventProcessor struct{}
+
+func (p *testRageQuitEventProcessor) EventType() string {
+	return "rse-rage-quit"
 }
 
-func (p *testStatEventProcessor) EventType() string {
-	return "stat_item_updated"
-}
-
-func (p *testStatEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
+func (p *testRageQuitEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
 	statEvent, ok := event.(*statistic.StatItemUpdated)
 	if !ok {
 		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
 	}
 
-	payload := statEvent.GetPayload()
-	if payload == nil {
-		return nil, fmt.Errorf("stat event payload is nil")
-	}
-
 	userID := statEvent.GetUserId()
-	statCode := payload.GetStatCode()
-	value := payload.GetLatestValue()
-
 	if userID == "" {
 		return nil, fmt.Errorf("user ID is empty")
-	}
-	if statCode == "" {
-		return nil, fmt.Errorf("stat code is empty")
 	}
 
 	playerCtx, err := contextLoader.Load(ctx, userID)
@@ -155,24 +138,7 @@ func (p *testStatEventProcessor) Process(ctx context.Context, event interface{},
 		return nil, err
 	}
 
-	timestamp := time.Now()
-
-	mapper := p.mapperRegistry.Get(statCode)
-	if mapper != nil {
-		return mapper.MapToSignal(userID, timestamp, value, playerCtx), nil
-	}
-
-	return NewStatUpdateSignal(userID, timestamp, statCode, value, playerCtx), nil
-}
-
-// Test mapper implementations - use generic signals to avoid circular dependencies
-type testRageQuitMapper struct{}
-
-func (m *testRageQuitMapper) StatCode() string {
-	return "rse-rage-quit"
-}
-
-func (m *testRageQuitMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *PlayerContext) Signal {
+	value := statEvent.GetPayload().GetLatestValue()
 	metadata := map[string]interface{}{
 		"quit_count": int(value),
 		"stat_code":  "rse-rage-quit",
@@ -180,19 +146,36 @@ func (m *testRageQuitMapper) MapToSignal(userID string, timestamp time.Time, val
 	return &testSignal{
 		signalType: "rage_quit",
 		userID:     userID,
-		timestamp:  timestamp,
+		timestamp:  time.Now(),
 		metadata:   metadata,
-		context:    context,
-	}
+		context:    playerCtx,
+	}, nil
 }
 
-type testMatchWinMapper struct{}
+// testMatchWinEventProcessor processes "rse-match-wins" stat events for testing.
+type testMatchWinEventProcessor struct{}
 
-func (m *testMatchWinMapper) StatCode() string {
+func (p *testMatchWinEventProcessor) EventType() string {
 	return "rse-match-wins"
 }
 
-func (m *testMatchWinMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *PlayerContext) Signal {
+func (p *testMatchWinEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
+	statEvent, ok := event.(*statistic.StatItemUpdated)
+	if !ok {
+		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
+	}
+
+	userID := statEvent.GetUserId()
+	if userID == "" {
+		return nil, fmt.Errorf("user ID is empty")
+	}
+
+	playerCtx, err := contextLoader.Load(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	value := statEvent.GetPayload().GetLatestValue()
 	metadata := map[string]interface{}{
 		"total_wins": int(value),
 		"stat_code":  "rse-match-wins",
@@ -200,19 +183,36 @@ func (m *testMatchWinMapper) MapToSignal(userID string, timestamp time.Time, val
 	return &testSignal{
 		signalType: "match_win",
 		userID:     userID,
-		timestamp:  timestamp,
+		timestamp:  time.Now(),
 		metadata:   metadata,
-		context:    context,
-	}
+		context:    playerCtx,
+	}, nil
 }
 
-type testLosingStreakMapper struct{}
+// testLosingStreakEventProcessor processes "rse-current-losing-streak" stat events for testing.
+type testLosingStreakEventProcessor struct{}
 
-func (m *testLosingStreakMapper) StatCode() string {
+func (p *testLosingStreakEventProcessor) EventType() string {
 	return "rse-current-losing-streak"
 }
 
-func (m *testLosingStreakMapper) MapToSignal(userID string, timestamp time.Time, value float64, context *PlayerContext) Signal {
+func (p *testLosingStreakEventProcessor) Process(ctx context.Context, event interface{}, contextLoader PlayerContextLoader) (Signal, error) {
+	statEvent, ok := event.(*statistic.StatItemUpdated)
+	if !ok {
+		return nil, fmt.Errorf("expected *statistic.StatItemUpdated, got %T", event)
+	}
+
+	userID := statEvent.GetUserId()
+	if userID == "" {
+		return nil, fmt.Errorf("user ID is empty")
+	}
+
+	playerCtx, err := contextLoader.Load(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	value := statEvent.GetPayload().GetLatestValue()
 	metadata := map[string]interface{}{
 		"current_streak": int(value),
 		"stat_code":      "rse-current-losing-streak",
@@ -220,10 +220,10 @@ func (m *testLosingStreakMapper) MapToSignal(userID string, timestamp time.Time,
 	return &testSignal{
 		signalType: "losing_streak",
 		userID:     userID,
-		timestamp:  timestamp,
+		timestamp:  time.Now(),
 		metadata:   metadata,
-		context:    context,
-	}
+		context:    playerCtx,
+	}, nil
 }
 
 func TestNewProcessor(t *testing.T) {

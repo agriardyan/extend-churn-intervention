@@ -1,4 +1,4 @@
-package examples
+package builtin
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func (p *OAuthEventProcessor) Process(ctx context.Context, event interface{}, pl
 	}
 
 	// Create login signal
-	loginSignal := NewOauthTokenGeneratedSignal(userID, time.Now(), playerCtx)
+	loginSignal := NewLoginSignal(userID, time.Now(), playerCtx)
 
 	logrus.Debugf("processed OAuth event for user %s into LoginSignal", userID)
 	return loginSignal, nil

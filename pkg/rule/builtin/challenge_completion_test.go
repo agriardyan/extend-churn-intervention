@@ -1,4 +1,4 @@
-package examples
+package builtin
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
@@ -33,7 +33,7 @@ func TestChallengeCompletionRule_NoActiveChallenge(t *testing.T) {
 		},
 	}
 
-	sig := signalExamples.NewWinSignal("test-user", time.Now(), 10, playerCtx)
+	sig := signalBuiltin.NewWinSignal("test-user", time.Now(), 10, playerCtx)
 
 	matched, trigger, err := r.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -74,7 +74,7 @@ func TestChallengeCompletionRule_ChallengeExpired(t *testing.T) {
 		},
 	}
 
-	sig := signalExamples.NewWinSignal("test-user", time.Now(), 10, playerCtx)
+	sig := signalBuiltin.NewWinSignal("test-user", time.Now(), 10, playerCtx)
 
 	matched, trigger, err := r.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -117,7 +117,7 @@ func TestChallengeCompletionRule_ChallengeNotYetCompleted(t *testing.T) {
 
 	// Player now has 7 wins total (5 at start + 2 new wins)
 	// Need 3 wins, only achieved 2 so far
-	sig := signalExamples.NewWinSignal("test-user", time.Now(), 7, playerCtx)
+	sig := signalBuiltin.NewWinSignal("test-user", time.Now(), 7, playerCtx)
 
 	matched, trigger, err := r.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -161,7 +161,7 @@ func TestChallengeCompletionRule_ChallengeCompleted(t *testing.T) {
 
 	// Player now has 8 wins total (5 at start + 3 new wins)
 	// Exactly met the requirement
-	sig := signalExamples.NewWinSignal("test-user", time.Now(), 8, playerCtx)
+	sig := signalBuiltin.NewWinSignal("test-user", time.Now(), 8, playerCtx)
 
 	matched, trigger, err := r.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -224,7 +224,7 @@ func TestChallengeCompletionRule_ChallengeExceeded(t *testing.T) {
 
 	// Player now has 10 wins total (5 at start + 5 new wins)
 	// Exceeded the requirement (only needed 3)
-	sig := signalExamples.NewWinSignal("test-user", time.Now(), 10, playerCtx)
+	sig := signalBuiltin.NewWinSignal("test-user", time.Now(), 10, playerCtx)
 
 	matched, trigger, err := r.Evaluate(context.Background(), sig)
 	if err != nil {
@@ -258,7 +258,7 @@ func TestChallengeCompletionRule_NoPlayerContext(t *testing.T) {
 	r := NewChallengeCompletionRule(config)
 
 	// Signal without player context
-	sig := signalExamples.NewWinSignal("test-user", time.Now(), 10, nil)
+	sig := signalBuiltin.NewWinSignal("test-user", time.Now(), 10, nil)
 
 	matched, trigger, err := r.Evaluate(context.Background(), sig)
 	if err != nil {

@@ -1,4 +1,4 @@
-package examples
+package builtin
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 	"github.com/sirupsen/logrus"
 )
@@ -43,7 +43,7 @@ func (r *SessionDeclineRule) Name() string {
 
 // SignalTypes returns the signal types this rule handles.
 func (r *SessionDeclineRule) SignalTypes() []string {
-	return []string{signalExamples.TypeOauthTokenGenerated}
+	return []string{signalBuiltin.TypeLogin}
 }
 
 // Config returns the rule configuration.

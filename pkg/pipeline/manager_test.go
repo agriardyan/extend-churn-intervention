@@ -12,7 +12,7 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalExamples "github.com/AccelByte/extends-anti-churn/pkg/signal/examples"
+	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
 	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
@@ -111,16 +111,12 @@ func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, st
 	return nil
 }
 
-// setupTestProcessor creates a processor with builtin event processors and mappers registered
+// setupTestProcessor creates a processor with builtin event processors registered
 func setupTestProcessor(stateStore service.StateStore) *signal.Processor {
 	processor := signal.NewProcessor(stateStore, "test")
 
-	// Register builtin mappers and event processors
-	signalExamples.RegisterEventMappers(processor.GetMapperRegistry())
-	signalExamples.RegisterEventProcessors(
-		processor.GetEventProcessorRegistry(),
-		processor.GetMapperRegistry(),
-	)
+	// Register builtin event processors
+	signalBuiltin.RegisterEventProcessors(processor.GetEventProcessorRegistry())
 
 	return processor
 }
