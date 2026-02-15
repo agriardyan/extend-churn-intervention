@@ -6,7 +6,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 // testAction is a simple action for testing
@@ -67,7 +67,7 @@ func TestExecutor_Execute_Success(t *testing.T) {
 	trigger := rule.NewTrigger("test_rule", "test-user", "test reason", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	result, err := executor.Execute(context.Background(), "test_action", trigger, playerCtx)
@@ -91,7 +91,7 @@ func TestExecutor_Execute_ActionNotFound(t *testing.T) {
 	trigger := rule.NewTrigger("test_rule", "test-user", "test reason", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	result, err := executor.Execute(context.Background(), "nonexistent_action", trigger, playerCtx)
@@ -122,7 +122,7 @@ func TestExecutor_Execute_ActionError(t *testing.T) {
 	trigger := rule.NewTrigger("test_rule", "test-user", "test reason", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	result, err := executor.Execute(context.Background(), "failing_action", trigger, playerCtx)
@@ -160,7 +160,7 @@ func TestExecutor_ExecuteMultiple_Success(t *testing.T) {
 	trigger := rule.NewTrigger("test_rule", "test-user", "test reason", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	results, err := executor.ExecuteMultiple(context.Background(), []string{"action1", "action2"}, trigger, playerCtx, false)
@@ -207,7 +207,7 @@ func TestExecutor_ExecuteMultiple_WithRollback(t *testing.T) {
 	trigger := rule.NewTrigger("test_rule", "test-user", "test reason", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	results, err := executor.ExecuteMultiple(context.Background(), []string{"action1", "action2"}, trigger, playerCtx, true)
@@ -256,7 +256,7 @@ func TestExecutor_ExecuteMultiple_NoRollback(t *testing.T) {
 	trigger := rule.NewTrigger("test_rule", "test-user", "test reason", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	results, err := executor.ExecuteMultiple(context.Background(), []string{"action1", "action2"}, trigger, playerCtx, false)

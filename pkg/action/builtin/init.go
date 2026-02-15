@@ -9,6 +9,7 @@ import (
 type Dependencies struct {
 	StateStore         service.StateStore
 	EntitlementGranter service.EntitlementGranter
+	UserStatUpdater    service.UserStatisticUpdater
 	Namespace          string
 }
 
@@ -23,7 +24,7 @@ func init() {
 func RegisterActions(deps *Dependencies) {
 	// Register comeback challenge action
 	action.RegisterActionType(ComebackChallengeActionID, func(config action.ActionConfig) (action.Action, error) {
-		return NewComebackChallengeAction(config, deps.StateStore), nil
+		return NewDispatchComebackChallengeAction(config, deps.StateStore, deps.UserStatUpdater), nil
 	})
 
 	// Register grant item action

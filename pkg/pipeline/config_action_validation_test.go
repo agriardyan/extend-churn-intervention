@@ -19,13 +19,13 @@ rules:
   - id: test-rule
     type: rage_quit
     enabled: true
-    actions: [comeback-challenge, non-existent-action]
+    actions: [dispatch-comeback-challenge, non-existent-action]
     parameters:
       threshold: 3
 
 actions:
-  - id: comeback-challenge
-    type: comeback_challenge
+  - id: dispatch-comeback-challenge
+    type: dispatch_comeback_challenge
     enabled: true
     parameters:
       wins_needed: 3
@@ -56,13 +56,13 @@ rules:
   - id: test-rule
     type: rage_quit
     enabled: true
-    actions: [comeback-challenge, grant-item]
+    actions: [dispatch-comeback-challenge, grant-item]
     parameters:
       threshold: 3
 
 actions:
-  - id: comeback-challenge
-    type: comeback_challenge
+  - id: dispatch-comeback-challenge
+    type: dispatch_comeback_challenge
     enabled: true
     parameters:
       wins_needed: 3
@@ -91,8 +91,8 @@ actions:
 		t.Errorf("expected 2 actions in rule, got %d", len(config.Rules[0].Actions))
 	}
 
-	if config.Rules[0].Actions[0] != "comeback-challenge" {
-		t.Errorf("expected first action to be 'comeback-challenge', got %s", config.Rules[0].Actions[0])
+	if config.Rules[0].Actions[0] != "dispatch-comeback-challenge" {
+		t.Errorf("expected first action to be 'dispatch-comeback-challenge', got %s", config.Rules[0].Actions[0])
 	}
 
 	if config.Rules[0].Actions[1] != "grant-item" {

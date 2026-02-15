@@ -29,8 +29,8 @@ rules:
       threshold: 5
 
 actions:
-  - id: comeback-challenge
-    type: comeback_challenge
+  - id: dispatch-comeback-challenge
+    type: dispatch_comeback_challenge
     enabled: true
     parameters:
       wins_needed: 3
@@ -80,8 +80,8 @@ actions:
 		t.Errorf("expected 2 actions, got %d", len(config.Actions))
 	}
 
-	if config.Actions[0].ID != "comeback-challenge" {
-		t.Errorf("expected first action ID 'comeback-challenge', got '%s'", config.Actions[0].ID)
+	if config.Actions[0].ID != "dispatch-comeback-challenge" {
+		t.Errorf("expected first action ID 'dispatch-comeback-challenge', got '%s'", config.Actions[0].ID)
 	}
 }
 
@@ -168,7 +168,7 @@ func TestValidate_DuplicateActionID(t *testing.T) {
 	config := &Config{
 		Rules: []RuleConfig{},
 		Actions: []ActionConfig{
-			{ID: "duplicate", Type: "comeback_challenge", Enabled: true},
+			{ID: "duplicate", Type: "dispatch_comeback_challenge", Enabled: true},
 			{ID: "duplicate", Type: "grant_item", Enabled: true},
 		},
 	}

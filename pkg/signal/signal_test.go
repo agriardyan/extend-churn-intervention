@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 func TestStatUpdateSignal(t *testing.T) {
 	timestamp := time.Now()
 	playerCtx := &PlayerContext{
 		UserID: "user123",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	signal := NewStatUpdateSignal("user123", timestamp, "custom-stat", 99.5, playerCtx)

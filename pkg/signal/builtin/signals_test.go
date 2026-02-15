@@ -4,15 +4,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
 func TestLoginSignal(t *testing.T) {
 	timestamp := time.Now()
 	playerCtx := &signal.PlayerContext{
 		UserID: "user123",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	sig := NewLoginSignal("user123", timestamp, playerCtx)
@@ -30,37 +30,11 @@ func TestLoginSignal(t *testing.T) {
 	}
 }
 
-func TestWinSignal(t *testing.T) {
-	timestamp := time.Now()
-	playerCtx := &signal.PlayerContext{
-		UserID: "user123",
-		State:  &state.ChurnState{},
-	}
-
-	sig := NewWinSignal("user123", timestamp, 42, playerCtx)
-
-	if sig.Type() != TypeMatchWin {
-		t.Errorf("Expected type '%s', got '%s'", TypeMatchWin, sig.Type())
-	}
-
-	if sig.TotalWins != 42 {
-		t.Errorf("Expected TotalWins 42, got %d", sig.TotalWins)
-	}
-
-	if sig.Metadata()["total_wins"] != 42 {
-		t.Errorf("Expected metadata total_wins=42")
-	}
-
-	if sig.Metadata()["stat_code"] != "rse-match-wins" {
-		t.Errorf("Expected stat_code in metadata")
-	}
-}
-
 func TestRageQuitSignal(t *testing.T) {
 	timestamp := time.Now()
 	playerCtx := &signal.PlayerContext{
 		UserID: "user123",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	sig := NewRageQuitSignal("user123", timestamp, 5, playerCtx)
@@ -86,7 +60,7 @@ func TestLossSignal(t *testing.T) {
 	timestamp := time.Now()
 	playerCtx := &signal.PlayerContext{
 		UserID: "user123",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	sig := NewLosingStreakSignal("user123", timestamp, 7, playerCtx)

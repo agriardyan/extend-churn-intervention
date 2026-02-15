@@ -65,7 +65,7 @@ func TestValidateWiring_AllRegistered(t *testing.T) {
 	ruleRegistry.Register(rule2)
 
 	// Register actions
-	action1 := &mockAction{id: "comeback-challenge", enabled: true}
+	action1 := &mockAction{id: "dispatch-comeback-challenge", enabled: true}
 	action2 := &mockAction{id: "grant-item", enabled: true}
 	actionRegistry.Register(action1)
 	actionRegistry.Register(action2)
@@ -73,11 +73,11 @@ func TestValidateWiring_AllRegistered(t *testing.T) {
 	// Create config
 	config := &Config{
 		Rules: []RuleConfig{
-			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"comeback-challenge"}},
+			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"dispatch-comeback-challenge"}},
 			{ID: "session-decline-rule", Type: "session_decline", Enabled: true, Actions: []string{"grant-item"}},
 		},
 		Actions: []ActionConfig{
-			{ID: "comeback-challenge", Type: "comeback_challenge", Enabled: true},
+			{ID: "dispatch-comeback-challenge", Type: "dispatch_comeback_challenge", Enabled: true},
 			{ID: "grant-item", Type: "grant_item", Enabled: true},
 		},
 	}
@@ -98,16 +98,16 @@ func TestValidateWiring_MissingRule(t *testing.T) {
 	ruleRegistry.Register(rule1)
 
 	// Register actions
-	action1 := &mockAction{id: "comeback-challenge", enabled: true}
+	action1 := &mockAction{id: "dispatch-comeback-challenge", enabled: true}
 	actionRegistry.Register(action1)
 
 	config := &Config{
 		Rules: []RuleConfig{
-			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"comeback-challenge"}},
-			{ID: "missing-rule", Type: "missing_type", Enabled: true, Actions: []string{"comeback-challenge"}},
+			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"dispatch-comeback-challenge"}},
+			{ID: "missing-rule", Type: "missing_type", Enabled: true, Actions: []string{"dispatch-comeback-challenge"}},
 		},
 		Actions: []ActionConfig{
-			{ID: "comeback-challenge", Type: "comeback_challenge", Enabled: true},
+			{ID: "dispatch-comeback-challenge", Type: "dispatch_comeback_challenge", Enabled: true},
 		},
 	}
 
@@ -133,15 +133,15 @@ func TestValidateWiring_MissingAction(t *testing.T) {
 	ruleRegistry.Register(rule1)
 
 	// Register only one action, but config has two
-	action1 := &mockAction{id: "comeback-challenge", enabled: true}
+	action1 := &mockAction{id: "dispatch-comeback-challenge", enabled: true}
 	actionRegistry.Register(action1)
 
 	config := &Config{
 		Rules: []RuleConfig{
-			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"comeback-challenge"}},
+			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"dispatch-comeback-challenge"}},
 		},
 		Actions: []ActionConfig{
-			{ID: "comeback-challenge", Type: "comeback_challenge", Enabled: true},
+			{ID: "dispatch-comeback-challenge", Type: "dispatch_comeback_challenge", Enabled: true},
 			{ID: "missing-action", Type: "missing_type", Enabled: true},
 		},
 	}
@@ -167,17 +167,17 @@ func TestValidateWiring_DisabledRuleNotValidated(t *testing.T) {
 	rule1 := &mockRule{id: "rage-quit-rule", enabled: true}
 	ruleRegistry.Register(rule1)
 
-	action1 := &mockAction{id: "comeback-challenge", enabled: true}
+	action1 := &mockAction{id: "dispatch-comeback-challenge", enabled: true}
 	actionRegistry.Register(action1)
 
 	config := &Config{
 		Rules: []RuleConfig{
-			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"comeback-challenge"}},
+			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"dispatch-comeback-challenge"}},
 			// This rule is disabled, so it should not be validated
-			{ID: "disabled-rule", Type: "some_type", Enabled: false, Actions: []string{"comeback-challenge"}},
+			{ID: "disabled-rule", Type: "some_type", Enabled: false, Actions: []string{"dispatch-comeback-challenge"}},
 		},
 		Actions: []ActionConfig{
-			{ID: "comeback-challenge", Type: "comeback_challenge", Enabled: true},
+			{ID: "dispatch-comeback-challenge", Type: "dispatch_comeback_challenge", Enabled: true},
 		},
 	}
 
@@ -196,15 +196,15 @@ func TestValidateWiring_DisabledActionNotValidated(t *testing.T) {
 	ruleRegistry.Register(rule1)
 
 	// Register only one action
-	action1 := &mockAction{id: "comeback-challenge", enabled: true}
+	action1 := &mockAction{id: "dispatch-comeback-challenge", enabled: true}
 	actionRegistry.Register(action1)
 
 	config := &Config{
 		Rules: []RuleConfig{
-			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"comeback-challenge"}},
+			{ID: "rage-quit-rule", Type: "rage_quit", Enabled: true, Actions: []string{"dispatch-comeback-challenge"}},
 		},
 		Actions: []ActionConfig{
-			{ID: "comeback-challenge", Type: "comeback_challenge", Enabled: true},
+			{ID: "dispatch-comeback-challenge", Type: "dispatch_comeback_challenge", Enabled: true},
 			// This action is disabled, so it should not be validated
 			{ID: "disabled-action", Type: "some_type", Enabled: false},
 		},

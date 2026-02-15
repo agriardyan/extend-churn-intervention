@@ -10,5 +10,4 @@ func RegisterEventProcessors(registry *signal.EventProcessorRegistry, stateStore
 	registry.Register(NewOAuthEventProcessor(stateStore, namespace))
 	registry.Register(NewRageQuitEventProcessor(stateStore, namespace))
 	registry.Register(NewLosingStreakEventProcessor(stateStore, namespace))
-	registry.Register(NewMatchWinEventProcessor(stateStore, namespace))
 }

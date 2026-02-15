@@ -9,7 +9,6 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
 )
@@ -52,6 +51,7 @@ func getRedisClient(mr *miniredis.Miniredis) *redis.Client {
 }
 
 // getStateFromRedis retrieves churn state from Redis
-func getStateFromRedis(ctx context.Context, client *redis.Client, userID string) (*state.ChurnState, error) {
-	return state.GetChurnState(ctx, client, userID)
+func getStateFromRedis(ctx context.Context, client *redis.Client, userID string) (*service.ChurnState, error) {
+	stateStore := service.NewRedisStateStore(client, service.RedisStateStoreConfig{})
+	return stateStore.GetChurnState(ctx, userID)
 }

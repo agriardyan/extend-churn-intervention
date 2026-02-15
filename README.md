@@ -73,7 +73,7 @@ This system is **read-only** for game state. It REACTS to events, it does NOT ma
 # ✅ CORRECT: Detecting churn and intervening
 - id: losing-streak
   type: losing_streak
-  actions: [comeback-challenge]  # Create intervention
+  actions: [dispatch-comeback-challenge]  # Create intervention
 
 # ✅ CORRECT: Rewarding completion
 - id: challenge-completion
@@ -196,7 +196,7 @@ rules:
   - id: player-inactivity
     type: inactivity
     enabled: true
-    actions: [comeback-challenge]
+    actions: [dispatch-comeback-challenge]
 ```
 
 ### Adding a New Intervention Action
@@ -271,7 +271,7 @@ go test -v ./pkg/pipeline/...
 
 ## Built-in Actions
 
-- **comeback-challenge**: Creates a time-limited challenge (win N matches in X days)
+- **dispatch-comeback-challenge**: Creates a time-limited challenge (win N matches in X days)
 - **grant-item**: Grants an item/entitlement to the player
 
 ## Common Pitfalls
@@ -310,7 +310,7 @@ rules:
 # CORRECT: Detect churn risk and trigger intervention
 - id: at-risk-player
   type: losing_streak
-  actions: [comeback-challenge, send-notification]  # Our job!
+  actions: [dispatch-comeback-challenge, send-notification]  # Our job!
 ```
 
 ## Deployment

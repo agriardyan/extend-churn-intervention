@@ -1,14 +1,12 @@
 package signal
 
 import (
-	"time"
-
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 // BuildPlayerContext creates a PlayerContext from churn state.
 // This helper is used by event processors that need to enrich signals with player context.
-func BuildPlayerContext(userID, namespace string, churnState *state.ChurnState) *PlayerContext {
+func BuildPlayerContext(userID, namespace string, churnState *service.ChurnState) *PlayerContext {
 	playerContext := &PlayerContext{
 		UserID:      userID,
 		State:       churnState,
@@ -19,8 +17,8 @@ func BuildPlayerContext(userID, namespace string, churnState *state.ChurnState) 
 	// Add session metadata
 	playerContext.SessionInfo["sessions_this_week"] = churnState.Sessions.ThisWeek
 	playerContext.SessionInfo["sessions_last_week"] = churnState.Sessions.LastWeek
-	playerContext.SessionInfo["challenge_active"] = churnState.Challenge.Active
-	playerContext.SessionInfo["on_cooldown"] = time.Now().Before(churnState.Intervention.CooldownUntil)
+	playerContext.SessionInfo["active_interventions"] = len(churnState.GetActiveInterventions())
+	playerContext.SessionInfo["on_cooldown"] = churnState.Cooldown.IsOnCooldown()
 
 	return playerContext
 }

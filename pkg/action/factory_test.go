@@ -6,7 +6,7 @@ import (
 
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
 	actionBuiltin "github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 func init() {
@@ -17,11 +17,11 @@ func init() {
 // mockStateStore for testing
 type mockStateStore struct{}
 
-func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*state.ChurnState, error) {
-	return &state.ChurnState{}, nil
+func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*service.ChurnState, error) {
+	return &service.ChurnState{}, nil
 }
 
-func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, state *state.ChurnState) error {
+func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, state *service.ChurnState) error {
 	return nil
 }
 

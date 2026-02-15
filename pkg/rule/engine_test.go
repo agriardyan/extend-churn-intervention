@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
 // testRule is a rule that always matches for testing
@@ -67,7 +67,7 @@ func TestEngine_Evaluate_NoRules(t *testing.T) {
 
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
@@ -110,7 +110,7 @@ func TestEngine_Evaluate_SingleMatchingRule(t *testing.T) {
 
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
@@ -165,7 +165,7 @@ func TestEngine_Evaluate_MultipleMatchingRules(t *testing.T) {
 
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
@@ -206,7 +206,7 @@ func TestEngine_Evaluate_NoMatchingRules(t *testing.T) {
 
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
@@ -236,7 +236,7 @@ func TestEngine_Evaluate_RuleError(t *testing.T) {
 
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
@@ -285,7 +285,7 @@ func TestEngine_Evaluate_MixedResults(t *testing.T) {
 
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
@@ -301,40 +301,6 @@ func TestEngine_Evaluate_MixedResults(t *testing.T) {
 
 	if triggers[0].RuleID != "matching_rule" {
 		t.Errorf("Expected matching_rule to trigger, got '%s'", triggers[0].RuleID)
-	}
-}
-
-func TestEngine_EvaluateMultiple(t *testing.T) {
-	registry := NewRegistry()
-
-	rule := &testRule{
-		id:          "test_rule",
-		name:        "Test Rule",
-		signalTypes: []string{"login", "match_win"},
-		config:      RuleConfig{ID: "test_rule", Enabled: true, Priority: 10},
-		shouldMatch: true,
-	}
-	registry.Register(rule)
-
-	engine := NewEngine(registry)
-
-	playerCtx := &signal.PlayerContext{
-		UserID: "test-user",
-		State:  &state.ChurnState{},
-	}
-
-	signals := []signal.Signal{
-		signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx),
-		signalBuiltin.NewWinSignal("test-user", time.Now(), 5, playerCtx),
-	}
-
-	triggers, err := engine.EvaluateMultiple(context.Background(), signals)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	if len(triggers) != 2 {
-		t.Errorf("Expected 2 triggers, got %d", len(triggers))
 	}
 }
 

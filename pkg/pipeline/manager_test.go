@@ -13,7 +13,6 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
 // mockRule for testing
@@ -96,17 +95,17 @@ func (m *mockAction) Config() action.ActionConfig {
 
 // mockStateStore for testing
 type mockStateStore struct {
-	state *state.ChurnState
+	state *service.ChurnState
 }
 
-func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*state.ChurnState, error) {
+func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*service.ChurnState, error) {
 	if m.state != nil {
 		return m.state, nil
 	}
-	return &state.ChurnState{}, nil
+	return &service.ChurnState{}, nil
 }
 
-func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, state *state.ChurnState) error {
+func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, state *service.ChurnState) error {
 	m.state = state
 	return nil
 }
@@ -173,8 +172,8 @@ func TestProcessOAuthEvent_WithRuleTrigger(t *testing.T) {
 
 	// Setup state store with session data to trigger session decline
 	stateStore := &mockStateStore{
-		state: &state.ChurnState{
-			Sessions: state.SessionState{
+		state: &service.ChurnState{
+			Sessions: service.SessionState{
 				ThisWeek: 10,
 				LastWeek: 20, // 50% decline
 			},
@@ -220,7 +219,7 @@ func TestProcessStatEvent_RageQuit(t *testing.T) {
 
 	// Setup state store - processor will track consecutive losses
 	stateStore := &mockStateStore{
-		state: &state.ChurnState{},
+		state: &service.ChurnState{},
 	}
 	processor := setupTestProcessor(stateStore)
 
@@ -228,7 +227,7 @@ func TestProcessStatEvent_RageQuit(t *testing.T) {
 	mockRule := &mockRule{
 		id:          "rage-quit-rule",
 		shouldMatch: true,
-		actionIDs:   []string{"comeback-challenge"},
+		actionIDs:   []string{"dispatch-comeback-challenge"},
 	}
 
 	ruleRegistry := rule.NewRegistry()
@@ -237,7 +236,7 @@ func TestProcessStatEvent_RageQuit(t *testing.T) {
 
 	// Setup action
 	mockAction := &mockAction{
-		id:         "comeback-challenge",
+		id:         "dispatch-comeback-challenge",
 		shouldFail: false,
 	}
 
@@ -302,7 +301,7 @@ func TestProcessStatEvent_MultipleActions(t *testing.T) {
 	ctx := context.Background()
 
 	stateStore := &mockStateStore{
-		state: &state.ChurnState{},
+		state: &service.ChurnState{},
 	}
 	processor := setupTestProcessor(stateStore)
 
@@ -347,7 +346,7 @@ func TestProcessStatEvent_ActionFailure(t *testing.T) {
 	ctx := context.Background()
 
 	stateStore := &mockStateStore{
-		state: &state.ChurnState{},
+		state: &service.ChurnState{},
 	}
 	processor := setupTestProcessor(stateStore)
 

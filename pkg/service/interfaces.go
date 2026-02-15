@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
 // Service interfaces for external dependencies that rules/actions can use.
@@ -17,14 +15,14 @@ type EntitlementGranter interface {
 	GrantEntitlement(ctx context.Context, userID, itemID string, quantity int) error
 }
 
-type StatUpdater interface {
+type UserStatisticUpdater interface {
 	// UpdatePlayerStat updates a player's statistic
-	ResetCurrentLosingStreak(ctx context.Context, userID string) error
+	UpdateStatComebackChallenge(ctx context.Context, userID string) error
 }
 
 // StateStore defines the interface for accessing player churn state.
 // This allows for easier testing and different storage implementations.
 type StateStore interface {
-	GetChurnState(ctx context.Context, userID string) (*state.ChurnState, error)
-	UpdateChurnState(ctx context.Context, userID string, state *state.ChurnState) error
+	GetChurnState(ctx context.Context, userID string) (*ChurnState, error)
+	UpdateChurnState(ctx context.Context, userID string, state *ChurnState) error
 }

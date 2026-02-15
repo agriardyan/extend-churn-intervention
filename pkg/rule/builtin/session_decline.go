@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
 	"github.com/sirupsen/logrus"
 )
 
@@ -65,10 +65,10 @@ func (r *SessionDeclineRule) Evaluate(ctx context.Context, sig signal.Signal) (b
 
 	// Check if player is churning BEFORE doing weekly reset
 	// (weekly reset moves ThisWeek to LastWeek, so we need to check first)
-	isChurning := state.IsChurning(playerState, now)
+	isChurning := isChurning(playerState, now)
 
 	// Perform weekly reset if needed
-	resetOccurred := state.CheckWeeklyReset(playerState, now)
+	resetOccurred := checkWeeklyReset(playerState, now)
 	if resetOccurred {
 		logrus.Debugf("weekly reset occurred for user %s", sig.UserID())
 	}
@@ -79,15 +79,18 @@ func (r *SessionDeclineRule) Evaluate(ctx context.Context, sig signal.Signal) (b
 	}
 
 	// Check if intervention can be triggered (cooldown check)
-	if !state.CanTriggerIntervention(playerState, now) {
+	if playerState.Cooldown.IsOnCooldown() {
 		logrus.Debugf("session decline detected for user %s but intervention in cooldown", sig.UserID())
 		return false, nil, nil
 	}
 
-	// Check if there's already an active challenge
-	if playerState.Challenge.Active {
-		logrus.Debugf("session decline detected for user %s but challenge already active", sig.UserID())
-		return false, nil, nil
+	// Check if there's already an active comeback challenge intervention
+	activeInterventions := playerState.GetActiveInterventions()
+	for _, intervention := range activeInterventions {
+		if intervention.Type == "dispatch_comeback_challenge" {
+			logrus.Debugf("session decline detected for user %s but comeback challenge already active", sig.UserID())
+			return false, nil, nil
+		}
 	}
 
 	trigger := rule.NewTrigger(r.ID(), sig.UserID(), "Session frequency declined", r.config.Priority)
@@ -101,8 +104,52 @@ func (r *SessionDeclineRule) Evaluate(ctx context.Context, sig signal.Signal) (b
 	return true, trigger, nil
 }
 
-// SetInterventionCooldown is a helper to set the cooldown after an intervention is triggered.
-// This should be called by the action that handles the intervention.
-func SetInterventionCooldown(playerState *state.ChurnState, now time.Time, cooldownDuration time.Duration) {
-	state.SetInterventionCooldown(playerState, now, cooldownDuration)
+// checkWeeklyReset checks if a weekly reset should occur and performs it if needed.
+// Returns true if a reset occurred, false otherwise.
+// NOTE: We only cache session counts - we don't maintain them as source of truth.
+func checkWeeklyReset(state *service.ChurnState, now time.Time) bool {
+	// Calculate time since last reset
+	timeSinceReset := now.Sub(state.Sessions.LastReset)
+
+	// Check if a week hasn't passed (7 days)
+	if timeSinceReset < 7*24*time.Hour {
+		return false
+	}
+
+	logrus.Infof("weekly reset triggered: %v since last reset", timeSinceReset)
+
+	// Move thisWeek to lastWeek
+	state.Sessions.LastWeek = state.Sessions.ThisWeek
+
+	// Reset thisWeek counter
+	state.Sessions.ThisWeek = 0
+
+	// Update last reset time
+	state.Sessions.LastReset = now
+
+	return true
+}
+
+// isChurning determines if a player is exhibiting churn behavior.
+// A player is churning if:
+// - They had activity last week (LastWeek > 0)
+// - They have no activity this week (ThisWeek == 0)
+// - At least 7 days have passed since last reset
+func isChurning(state *service.ChurnState, now time.Time) bool {
+	timeSinceReset := now.Sub(state.Sessions.LastReset)
+
+	// Must be at least 7 days since reset to determine churn
+	if timeSinceReset < 7*24*time.Hour {
+		return false
+	}
+
+	// Was active last week but not this week
+	churning := state.Sessions.LastWeek > 0 && state.Sessions.ThisWeek == 0
+
+	if churning {
+		logrus.Infof("player is churning: lastWeek=%d, thisWeek=%d, timeSinceReset=%v",
+			state.Sessions.LastWeek, state.Sessions.ThisWeek, timeSinceReset)
+	}
+
+	return churning
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 func TestRageQuitRule_Evaluate(t *testing.T) {
@@ -57,7 +57,7 @@ func TestRageQuitRule_Evaluate(t *testing.T) {
 
 			playerCtx := &signal.PlayerContext{
 				UserID: "test-user",
-				State:  &state.ChurnState{},
+				State:  &service.ChurnState{},
 			}
 			sig := signalBuiltin.NewRageQuitSignal("test-user", time.Now(), int(tt.statValue), playerCtx)
 
@@ -101,7 +101,7 @@ func TestRageQuitRule_WrongSignalType(t *testing.T) {
 
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), playerCtx)
 
@@ -163,7 +163,7 @@ func TestLosingStreakRule_Evaluate(t *testing.T) {
 
 			playerCtx := &signal.PlayerContext{
 				UserID: "test-user",
-				State:  &state.ChurnState{},
+				State:  &service.ChurnState{},
 			}
 			sig := signalBuiltin.NewLosingStreakSignal("test-user", time.Now(), int(tt.statValue), playerCtx)
 
@@ -198,72 +198,82 @@ func TestLosingStreakRule_Evaluate(t *testing.T) {
 func TestSessionDeclineRule_Evaluate(t *testing.T) {
 	now := time.Now()
 	eightDaysAgo := now.Add(-8 * 24 * time.Hour)
+	expiresAt := now.Add(7 * 24 * time.Hour)
 
 	tests := []struct {
-		name              string
-		sessionState      state.SessionState
-		interventionState state.InterventionState
-		challengeActive   bool
-		expectTrigger     bool
+		name                    string
+		sessionState            service.SessionState
+		cooldownState           service.CooldownState
+		interventionHistory     []service.InterventionRecord
+		expectTrigger           bool
 	}{
 		{
 			name: "session decline detected",
-			sessionState: state.SessionState{
+			sessionState: service.SessionState{
 				LastWeek:  5,
 				ThisWeek:  0,
 				LastReset: eightDaysAgo,
 			},
-			interventionState: state.InterventionState{
+			cooldownState: service.CooldownState{
 				CooldownUntil: time.Time{}, // No cooldown
 			},
-			challengeActive: false,
-			expectTrigger:   true,
+			interventionHistory: []service.InterventionRecord{},
+			expectTrigger:       true,
 		},
 		{
 			name: "no decline - active this week",
-			sessionState: state.SessionState{
+			sessionState: service.SessionState{
 				LastWeek:  5,
 				ThisWeek:  3,
 				LastReset: eightDaysAgo,
 			},
-			interventionState: state.InterventionState{},
-			challengeActive:   false,
-			expectTrigger:     false,
+			cooldownState: service.CooldownState{},
+			interventionHistory: []service.InterventionRecord{},
+			expectTrigger:       false,
 		},
 		{
 			name: "no decline - inactive last week",
-			sessionState: state.SessionState{
+			sessionState: service.SessionState{
 				LastWeek:  0,
 				ThisWeek:  0,
 				LastReset: eightDaysAgo,
 			},
-			interventionState: state.InterventionState{},
-			challengeActive:   false,
-			expectTrigger:     false,
+			cooldownState: service.CooldownState{},
+			interventionHistory: []service.InterventionRecord{},
+			expectTrigger:       false,
 		},
 		{
 			name: "decline but in cooldown",
-			sessionState: state.SessionState{
+			sessionState: service.SessionState{
 				LastWeek:  5,
 				ThisWeek:  0,
 				LastReset: eightDaysAgo,
 			},
-			interventionState: state.InterventionState{
+			cooldownState: service.CooldownState{
 				CooldownUntil: now.Add(24 * time.Hour), // Still in cooldown
 			},
-			challengeActive: false,
-			expectTrigger:   false,
+			interventionHistory: []service.InterventionRecord{},
+			expectTrigger:       false,
 		},
 		{
-			name: "decline but challenge active",
-			sessionState: state.SessionState{
+			name: "decline but comeback challenge active",
+			sessionState: service.SessionState{
 				LastWeek:  5,
 				ThisWeek:  0,
 				LastReset: eightDaysAgo,
 			},
-			interventionState: state.InterventionState{},
-			challengeActive:   true,
-			expectTrigger:     false,
+			cooldownState: service.CooldownState{},
+			interventionHistory: []service.InterventionRecord{
+				{
+					ID:          "existing-challenge",
+					Type:        "dispatch_comeback_challenge",
+					TriggeredBy: "previous-rule",
+					TriggeredAt: now,
+					ExpiresAt:   &expiresAt,
+					Outcome:     "active",
+				},
+			},
+			expectTrigger: false,
 		},
 	}
 
@@ -278,12 +288,11 @@ func TestSessionDeclineRule_Evaluate(t *testing.T) {
 
 			rule := NewSessionDeclineRule(config)
 
-			playerState := &state.ChurnState{
-				Sessions:     tt.sessionState,
-				Intervention: tt.interventionState,
-				Challenge: state.ChallengeState{
-					Active: tt.challengeActive,
-				},
+			playerState := &service.ChurnState{
+				Sessions:            tt.sessionState,
+				Cooldown:            tt.cooldownState,
+				InterventionHistory: tt.interventionHistory,
+				SignalHistory:       []service.ChurnSignal{},
 			}
 
 			playerCtx := &signal.PlayerContext{

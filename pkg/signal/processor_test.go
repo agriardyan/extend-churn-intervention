@@ -9,39 +9,42 @@ import (
 	oauth "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
 	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/AccelByte/extends-anti-churn/pkg/service"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
 )
 
 // mockStateStore is a simple in-memory state store for testing
 type mockStateStore struct {
-	states map[string]*state.ChurnState
+	states map[string]*service.ChurnState
 }
 
 func newMockStateStore() *mockStateStore {
 	return &mockStateStore{
-		states: make(map[string]*state.ChurnState),
+		states: make(map[string]*service.ChurnState),
 	}
 }
 
-func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*state.ChurnState, error) {
+func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*service.ChurnState, error) {
 	if s, ok := m.states[userID]; ok {
 		return s, nil
 	}
 	// Return new state if not found
-	return &state.ChurnState{
-		Sessions: state.SessionState{
+	return &service.ChurnState{
+		Sessions: service.SessionState{
 			ThisWeek:  0,
 			LastWeek:  0,
 			LastReset: time.Now(),
 		},
-		Challenge: state.ChallengeState{
-			Active: false,
+		SignalHistory:       []service.ChurnSignal{},
+		InterventionHistory: []service.InterventionRecord{},
+		Cooldown: service.CooldownState{
+			LastInterventionAt: time.Time{},
+			CooldownUntil:      time.Time{},
+			InterventionCounts: make(map[string]int),
+			LastSignalAt:       make(map[string]time.Time),
 		},
-		Intervention: state.InterventionState{},
 	}, nil
 }
 
-func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, churnState *state.ChurnState) error {
+func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, churnState *service.ChurnState) error {
 	m.states[userID] = churnState
 	return nil
 }
@@ -480,11 +483,11 @@ func TestProcessor_ProcessStatEvent_EmptyStatCode(t *testing.T) {
 // Test error handling when state store fails
 type errorStateStore struct{}
 
-func (e *errorStateStore) GetChurnState(ctx context.Context, userID string) (*state.ChurnState, error) {
+func (e *errorStateStore) GetChurnState(ctx context.Context, userID string) (*service.ChurnState, error) {
 	return nil, fmt.Errorf("mock state store error")
 }
 
-func (e *errorStateStore) UpdateChurnState(ctx context.Context, userID string, churnState *state.ChurnState) error {
+func (e *errorStateStore) UpdateChurnState(ctx context.Context, userID string, churnState *service.ChurnState) error {
 	return fmt.Errorf("mock state store error")
 }
 

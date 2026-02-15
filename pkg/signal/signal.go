@@ -3,7 +3,7 @@ package signal
 import (
 	"time"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 // Signal represents a normalized domain event with player context.
@@ -31,7 +31,7 @@ type Signal interface {
 // This provides rules with all the context they need to make decisions.
 type PlayerContext struct {
 	UserID      string
-	State       *state.ChurnState
+	State       *service.ChurnState
 	Namespace   string
 	SessionInfo map[string]interface{}
 }

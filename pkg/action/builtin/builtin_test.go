@@ -8,7 +8,7 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/action"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	"github.com/AccelByte/extends-anti-churn/pkg/state"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 // mockStateStore is a mock implementation for testing
@@ -17,11 +17,11 @@ type mockStateStore struct {
 	updateError  error
 }
 
-func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*state.ChurnState, error) {
-	return &state.ChurnState{}, nil
+func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*service.ChurnState, error) {
+	return &service.ChurnState{}, nil
 }
 
-func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, state *state.ChurnState) error {
+func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, state *service.ChurnState) error {
 	m.updateCalled = true
 	return m.updateError
 }
@@ -41,8 +41,20 @@ func (m *mockEntitlementGranter) GrantEntitlement(ctx context.Context, userID, i
 	return m.grantError
 }
 
+// mockUserStatUpdater is a mock implementation for testing
+type mockUserStatUpdater struct {
+	updateCalled bool
+	updateError  error
+}
+
+func (m *mockUserStatUpdater) UpdateStatComebackChallenge(ctx context.Context, userID string) error {
+	m.updateCalled = true
+	return m.updateError
+}
+
 func TestComebackChallengeAction_Execute(t *testing.T) {
 	mockStore := &mockStateStore{}
+	mockStatUpdater := &mockUserStatUpdater{}
 	config := action.ActionConfig{
 		ID:      "test_challenge",
 		Type:    ComebackChallengeActionID,
@@ -54,10 +66,15 @@ func TestComebackChallengeAction_Execute(t *testing.T) {
 		},
 	}
 
-	act := NewComebackChallengeAction(config, mockStore)
+	act := NewDispatchComebackChallengeAction(config, mockStore, mockStatUpdater)
 
-	playerState := &state.ChurnState{
-		Challenge: state.ChallengeState{Active: false},
+	playerState := &service.ChurnState{
+		SignalHistory:       []service.ChurnSignal{},
+		InterventionHistory: []service.InterventionRecord{},
+		Cooldown: service.CooldownState{
+			InterventionCounts: make(map[string]int),
+			LastSignalAt:       make(map[string]time.Time),
+		},
 	}
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
@@ -72,20 +89,27 @@ func TestComebackChallengeAction_Execute(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if !playerState.Challenge.Active {
-		t.Error("Expected challenge to be active")
+	// Check intervention was recorded
+	if len(playerState.InterventionHistory) != 1 {
+		t.Errorf("Expected 1 intervention, got %d", len(playerState.InterventionHistory))
 	}
 
-	if playerState.Challenge.WinsNeeded != 3 {
-		t.Errorf("Expected wins needed 3, got %d", playerState.Challenge.WinsNeeded)
+	intervention := playerState.InterventionHistory[0]
+	if intervention.Type != ComebackChallengeActionID {
+		t.Errorf("Expected intervention type %s, got %s", ComebackChallengeActionID, intervention.Type)
 	}
 
-	if playerState.Challenge.WinsAtStart != 5 {
-		t.Errorf("Expected wins at start 5, got %d", playerState.Challenge.WinsAtStart)
+	if intervention.TriggeredBy != "rage_quit" {
+		t.Errorf("Expected triggered by 'rage_quit', got '%s'", intervention.TriggeredBy)
 	}
 
-	if playerState.Challenge.TriggerReason != "rage_quit" {
-		t.Errorf("Expected trigger reason 'rage_quit', got '%s'", playerState.Challenge.TriggerReason)
+	if intervention.Outcome != "active" {
+		t.Errorf("Expected outcome 'active', got '%s'", intervention.Outcome)
+	}
+
+	// Check cooldown was set
+	if !playerState.Cooldown.IsOnCooldown() {
+		t.Error("Expected cooldown to be set")
 	}
 
 	if !mockStore.updateCalled {
@@ -101,10 +125,26 @@ func TestComebackChallengeAction_Execute_ChallengeAlreadyActive(t *testing.T) {
 		Enabled: true,
 	}
 
-	act := NewComebackChallengeAction(config, mockStore)
+	act := NewDispatchComebackChallengeAction(config, mockStore, &mockUserStatUpdater{})
 
-	playerState := &state.ChurnState{
-		Challenge: state.ChallengeState{Active: true}, // Already active
+	// Create state with an active comeback challenge intervention
+	now := time.Now()
+	expiresAt := now.Add(7 * 24 * time.Hour)
+	playerState := &service.ChurnState{
+		SignalHistory: []service.ChurnSignal{},
+		InterventionHistory: []service.InterventionRecord{
+			{
+				ID:          "existing-intervention",
+				Type:        ComebackChallengeActionID,
+				TriggeredBy: "previous-rule",
+				TriggeredAt: now,
+				ExpiresAt:   &expiresAt,
+				Outcome:     "active",
+			},
+		},
+		Cooldown: service.CooldownState{
+			InterventionCounts: make(map[string]int),
+		},
 	}
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
@@ -119,7 +159,12 @@ func TestComebackChallengeAction_Execute_ChallengeAlreadyActive(t *testing.T) {
 	}
 
 	if mockStore.updateCalled {
-		t.Error("Did not expect state store update when challenge already active")
+		t.Error("Did not expect state store update when comeback challenge already active")
+	}
+
+	// Verify no new intervention was added
+	if len(playerState.InterventionHistory) != 1 {
+		t.Errorf("Expected only 1 intervention (existing), got %d", len(playerState.InterventionHistory))
 	}
 }
 
@@ -131,7 +176,7 @@ func TestComebackChallengeAction_Execute_NoPlayerContext(t *testing.T) {
 		Enabled: true,
 	}
 
-	act := NewComebackChallengeAction(config, mockStore)
+	act := NewDispatchComebackChallengeAction(config, mockStore, &mockUserStatUpdater{})
 
 	trigger := rule.NewTrigger("rage_quit", "test-user", "rage quit detected", 10)
 
@@ -149,16 +194,25 @@ func TestComebackChallengeAction_Rollback(t *testing.T) {
 		Enabled: true,
 	}
 
-	act := NewComebackChallengeAction(config, mockStore)
+	act := NewDispatchComebackChallengeAction(config, mockStore, &mockUserStatUpdater{})
 
-	playerState := &state.ChurnState{
-		Challenge: state.ChallengeState{
-			Active:        true,
-			TriggerReason: "rage_quit",
+	now := time.Now()
+	expiresAt := now.Add(7 * 24 * time.Hour)
+	playerState := &service.ChurnState{
+		SignalHistory: []service.ChurnSignal{},
+		InterventionHistory: []service.InterventionRecord{
+			{
+				ID:          "active-intervention",
+				Type:        ComebackChallengeActionID,
+				TriggeredBy: "rage_quit",
+				TriggeredAt: now,
+				ExpiresAt:   &expiresAt,
+				Outcome:     "active",
+			},
 		},
-		Intervention: state.InterventionState{
-			TotalTriggered: 1,
-			CooldownUntil:  time.Now().Add(48 * time.Hour),
+		Cooldown: service.CooldownState{
+			CooldownUntil:      now.Add(48 * time.Hour),
+			InterventionCounts: map[string]int{ComebackChallengeActionID: 1},
 		},
 	}
 	playerCtx := &signal.PlayerContext{
@@ -173,12 +227,19 @@ func TestComebackChallengeAction_Rollback(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if playerState.Challenge.Active {
-		t.Error("Expected challenge to be inactive after rollback")
+	// Check intervention was marked as failed
+	if len(playerState.InterventionHistory) != 1 {
+		t.Fatalf("Expected 1 intervention, got %d", len(playerState.InterventionHistory))
 	}
 
-	if playerState.Intervention.TotalTriggered != 0 {
-		t.Errorf("Expected intervention count 0, got %d", playerState.Intervention.TotalTriggered)
+	intervention := playerState.InterventionHistory[0]
+	if intervention.Outcome != "failed" {
+		t.Errorf("Expected intervention outcome 'failed', got '%s'", intervention.Outcome)
+	}
+
+	// Check cooldown was reset
+	if playerState.Cooldown.IsOnCooldown() {
+		t.Error("Expected cooldown to be reset after rollback")
 	}
 
 	if !mockStore.updateCalled {
@@ -203,7 +264,7 @@ func TestGrantItemAction_Execute(t *testing.T) {
 	trigger := rule.NewTrigger("challenge_complete", "test-user", "challenge completed", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	err := act.Execute(context.Background(), trigger, playerCtx)
@@ -241,7 +302,7 @@ func TestGrantItemAction_Execute_TestMode(t *testing.T) {
 	trigger := rule.NewTrigger("challenge_complete", "test-user", "challenge completed", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	err := act.Execute(context.Background(), trigger, playerCtx)
@@ -267,7 +328,7 @@ func TestGrantItemAction_Execute_NoItemID(t *testing.T) {
 	trigger := rule.NewTrigger("challenge_complete", "test-user", "challenge completed", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	err := act.Execute(context.Background(), trigger, playerCtx)
@@ -289,7 +350,7 @@ func TestGrantItemAction_Rollback(t *testing.T) {
 	trigger := rule.NewTrigger("challenge_complete", "test-user", "challenge completed", 10)
 	playerCtx := &signal.PlayerContext{
 		UserID: "test-user",
-		State:  &state.ChurnState{},
+		State:  &service.ChurnState{},
 	}
 
 	err := act.Rollback(context.Background(), trigger, playerCtx)

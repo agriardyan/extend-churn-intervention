@@ -17,8 +17,4 @@ func RegisterRules() {
 	rule.RegisterRuleType(SessionDeclineRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
 		return NewSessionDeclineRule(config), nil
 	})
-
-	rule.RegisterRuleType(ChallengeCompletionRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
-		return NewChallengeCompletionRule(config), nil
-	})
 }

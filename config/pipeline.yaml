@@ -7,7 +7,7 @@ rules:
   - id: rage-quit
     type: rage_quit
     enabled: true
-    actions: [comeback-challenge]  # Actions to execute when triggered
+    actions: [dispatch-comeback-challenge]  # Actions to execute when triggered
     parameters:
       threshold: 3  # Number of consecutive losses before triggering
 
@@ -15,7 +15,7 @@ rules:
   - id: losing-streak
     type: losing_streak
     enabled: true
-    actions: [comeback-challenge]  # Same actions as rage quit
+    actions: [dispatch-comeback-challenge]  # Same actions as rage quit
     parameters:
       threshold: 5  # Number of consecutive losses
 
@@ -23,7 +23,7 @@ rules:
   - id: session-decline
     type: session_decline
     enabled: true
-    actions: [comeback-challenge]  # Only challenge, no item grant
+    actions: [dispatch-comeback-challenge]  # Only challenge, no item grant
     parameters:
       decline_threshold: 0.5  # 50% decline from last week
       min_sessions_last_week: 3  # Minimum sessions last week to qualify
@@ -39,13 +39,13 @@ rules:
     actions: [grant-item]  # Grant item upon challenge completion
     parameters:
       wins_needed: 3
-      challenge_id: comeback-challenge
+      challenge_id: dispatch-comeback-challenge
 
 # Actions are executed when rules trigger
 actions:
   # Comeback Challenge - Creates a time-limited challenge
-  - id: comeback-challenge
-    type: comeback_challenge
+  - id: dispatch-comeback-challenge
+    type: dispatch_comeback_challenge
     enabled: true
     parameters:
       wins_needed: 3

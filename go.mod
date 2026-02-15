@@ -7,6 +7,8 @@ toolchain go1.23.2
 require (
 	github.com/AccelByte/accelbyte-go-sdk v0.85.0
 	github.com/alicebob/miniredis/v2 v2.35.0
+	github.com/caarlos0/env/v10 v10.0.0
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/joho/godotenv v1.5.1

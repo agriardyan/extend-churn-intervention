@@ -12,7 +12,7 @@ import (
 )
 
 type EntitlementService struct {
-	fulfillmentClient platform.FulfillmentService
+	fulfillmentClient *platform.FulfillmentService
 	cfg               EntitlementServiceConfig
 }
 
@@ -21,7 +21,7 @@ type EntitlementServiceConfig struct {
 }
 
 func NewEntitlementService(
-	fulfillmentClient platform.FulfillmentService,
+	fulfillmentClient *platform.FulfillmentService,
 	cfg EntitlementServiceConfig,
 ) *EntitlementService {
 	return &EntitlementService{
@@ -65,7 +65,7 @@ func (s *EntitlementService) GrantEntitlement(
 }
 
 type StatisticService struct {
-	statisticsService social.UserStatisticService
+	statisticsService *social.UserStatisticService
 	cfg               StatisticServiceConfig
 }
 
@@ -74,7 +74,7 @@ type StatisticServiceConfig struct {
 }
 
 func NewStatisticService(
-	statisticsService social.UserStatisticService,
+	statisticsService *social.UserStatisticService,
 	cfg StatisticServiceConfig,
 ) *StatisticService {
 	return &StatisticService{
@@ -83,21 +83,20 @@ func NewStatisticService(
 	}
 }
 
-func (s *StatisticService) ResetCurrentLosingStreak(ctx context.Context, userID string) error {
+func (s *StatisticService) UpdateStatComebackChallenge(ctx context.Context, userID string) error {
 	namespace := s.cfg.Namespace
 	statisticsService := s.statisticsService
 
-	statCode := "rse-current-losing-streak"
-
-	input := &user_statistic.ResetUserStatItemValueParams{
+	statCode := "rse-comeback-challenge"
+	input := &user_statistic.IncUserStatItemValueParams{
 		Namespace: namespace,
 		UserID:    userID,
 		StatCode:  statCode,
 	}
 
-	_, err := statisticsService.ResetUserStatItemValueShort(input)
+	_, err := statisticsService.IncUserStatItemValueShort(input)
 	if err != nil {
-		return fmt.Errorf("failed to reset user %s statistic %s: %w", userID, statCode, err)
+		return fmt.Errorf("failed to increment user %s statistic %s: %w", userID, statCode, err)
 	}
 
 	return nil
