@@ -59,7 +59,7 @@ COPY . .
 COPY --from=proto-builder /build/pkg/pb pkg/pb
 
 # Build the Go application binary for the target OS and architecture
-RUN go build -v -modcacherw -o /output/extends-anti-churn .
+RUN go build -v -modcacherw -o /output/extend-churn-intervention .
 
 
 # ----------------------------------------
@@ -76,12 +76,8 @@ RUN apk add --no-cache \
 # Set working directory.
 WORKDIR /app
 
-# Copy startup script
-COPY docker/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
 # Copy build
-COPY --from=builder /output/extends-anti-churn /app/main
+COPY --from=builder /output/extend-churn-intervention /app/main
 
 # Plugin Arch gRPC Server Port.
 EXPOSE 6565
@@ -89,5 +85,5 @@ EXPOSE 6565
 # Prometheus /metrics Web Server Port.
 EXPOSE 8080
 
-# Entrypoint - use startup script instead of direct binary
-ENTRYPOINT ["/app/start.sh"]
+# Entrypoint
+ENTRYPOINT ["/app/main"]

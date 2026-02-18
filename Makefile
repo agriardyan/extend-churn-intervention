@@ -4,7 +4,7 @@
 
 SHELL := /bin/bash
 
-IMAGE_NAME := extends-anti-churn
+IMAGE_NAME := extend-churn-intervention
 IMAGE_TAG ?= latest
 PROTOC_IMAGE := proto-builder
 

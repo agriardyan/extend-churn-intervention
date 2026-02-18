@@ -1,5 +1,5 @@
 # Anti-Churn Pipeline Configuration
-# This file defines the rules and actions for the anti-churn system.
+# This file defines the rules and actions for the churn intervention system.
 
 # Rules detect churn signals and trigger actions
 rules:

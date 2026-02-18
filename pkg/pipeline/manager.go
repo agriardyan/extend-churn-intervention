@@ -12,7 +12,7 @@ import (
 	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
-// Manager orchestrates the complete anti-churn pipeline:
+// Manager orchestrates the complete churn intervention pipeline:
 // Event → Signal → Rules → Actions
 type Manager struct {
 	signalProcessor *signal.Processor

@@ -16,7 +16,8 @@ package config
 // - `envDefault:"value"` - set a default value
 //
 // Example:
-//   NewFeature bool `env:"ENABLE_NEW_FEATURE" envDefault:"false"`
+//
+//	NewFeature bool `env:"ENABLE_NEW_FEATURE" envDefault:"false"`
 //
 // After adding fields here, update loader.go Validate() if custom
 // validation is needed.
@@ -57,7 +58,7 @@ type Config struct {
 	// ============================================================
 	OtelEnabled     bool   `env:"OTEL_ENABLED" envDefault:"true"`
 	OtelEndpoint    string `env:"OTEL_EXPORTER_OTLP_ENDPOINT"`
-	OtelServiceName string `env:"OTEL_SERVICE_NAME" envDefault:"extends-anti-churn"`
+	OtelServiceName string `env:"OTEL_SERVICE_NAME" envDefault:"extend-churn-intervention"`
 
 	// ============================================================
 	// DEVELOPER: Add your custom configuration fields below

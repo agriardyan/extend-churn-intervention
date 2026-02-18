@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// ChurnState represents anti-churn detection and intervention history for a player.
-// This is the ONLY state that the anti-churn system owns and manages.
+// ChurnState represents churn detection and intervention history for a player.
+// This is the state that the churn intervention system owns and manages.
 //
 // NOTE: This model is GENERIC and contains NO strategy-specific tracking data.
 // Individual rules (e.g., session_decline, spending_decline) manage their own
@@ -46,10 +46,10 @@ type InterventionRecord struct {
 // CooldownState tracks intervention throttling to prevent spam.
 // This ensures we don't overwhelm players with too many interventions.
 type CooldownState struct {
-	LastInterventionAt time.Time       `json:"lastInterventionAt"` // When we last intervened
-	CooldownUntil      time.Time       `json:"cooldownUntil"`      // When cooldown expires
-	InterventionCounts map[string]int  `json:"interventionCounts"` // Count per intervention type (for rate limiting)
-	LastSignalAt       map[string]time.Time `json:"lastSignalAt"` // Last detection time per signal type
+	LastInterventionAt time.Time            `json:"lastInterventionAt"` // When we last intervened
+	CooldownUntil      time.Time            `json:"cooldownUntil"`      // When cooldown expires
+	InterventionCounts map[string]int       `json:"interventionCounts"` // Count per intervention type (for rate limiting)
+	LastSignalAt       map[string]time.Time `json:"lastSignalAt"`       // Last detection time per signal type
 }
 
 // IsOnCooldown returns whether the player is currently in a cooldown period.

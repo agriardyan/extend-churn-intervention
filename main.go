@@ -16,7 +16,7 @@ func main() {
 	// Setup logging
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.SetLevel(logrus.InfoLevel)
-	logrus.Info("starting anti-churn service...")
+	logrus.Info("starting churn intervention service...")
 
 	// Load configuration
 	cfg, err := config.Load()

@@ -38,21 +38,21 @@ func NewMetricsServer(port int, endpoint string) *MetricsServer {
 // By default, we expose Go runtime and process metrics.
 // To add custom application metrics:
 //
-// 1. Define your metrics in a separate package (e.g., pkg/metrics/)
-//    Example:
-//    var RuleTriggersTotal = prometheus.NewCounterVec(
-//        prometheus.CounterOpts{
-//            Name: "anti_churn_rule_triggers_total",
-//            Help: "Total number of rule triggers",
-//        },
-//        []string{"rule_id", "rule_type"},
-//    )
+//  1. Define your metrics in a separate package (e.g., pkg/metrics/)
+//     Example:
+//     var RuleTriggersTotal = prometheus.NewCounterVec(
+//     prometheus.CounterOpts{
+//     Name: "churn_intervention_rule_triggers_total",
+//     Help: "Total number of rule triggers",
+//     },
+//     []string{"rule_id", "rule_type"},
+//     )
 //
-// 2. Register them here:
-//    registry.MustRegister(metrics.RuleTriggersTotal)
+//  2. Register them here:
+//     registry.MustRegister(metrics.RuleTriggersTotal)
 //
-// 3. Increment them in your code:
-//    metrics.RuleTriggersTotal.WithLabelValues(ruleID, ruleType).Inc()
+//  3. Increment them in your code:
+//     metrics.RuleTriggersTotal.WithLabelValues(ruleID, ruleType).Inc()
 //
 // See: https://prometheus.io/docs/guides/go-application/
 // ============================================================

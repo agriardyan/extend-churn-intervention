@@ -8,3 +8,40 @@ README.md
 *.md
 examples/
 .plan/
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+vendor/
+
+# Build artifact
+
+# Build metadata
+./dependencies.txt
+./service.sha256
+./migration
+./cyclo.txt
+./coverage.txt
+./profile.out
+dependencies.txt
+service.sha256
+cyclo.txt
+coverage.txt
+profile.out
+
+# Other
+localstack-data/
+
+# IDEs and editors
+.claude/*
+main
+extend-churn-intervention
+churn-intervention
+cmd/test*
+test-*
+!*.go
+
+example/*
+bin/*
+
+# Any files prefixed with `old`
+old.*

@@ -268,7 +268,7 @@ go test -v ./pkg/pipeline/...
 # Build Docker image
 make build
 
-# Docker image: extends-anti-churn:latest
+# Docker image: extend-churn-intervention:latest
 ```
 
 The service requires the following environment variables (see `.env.template`):
