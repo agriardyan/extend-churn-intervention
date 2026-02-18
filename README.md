@@ -177,7 +177,7 @@ The `session_decline` rule uses a map-based weekly tracking approach:
 
 ## Extending the System
 
-See **`PLUGIN_DEVELOPMENT.md`** for a detailed developer guide with complete code templates.
+See **📄 [PLUGIN DEVELOPMENT](PLUGIN_DEVELOPMENT.md)** for a detailed developer guide with complete code templates.
 
 For AI-assisted plugin creation, use the **`/add-plugin`** Claude Code skill which interactively generates all required files.
 
