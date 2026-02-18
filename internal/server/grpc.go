@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/common"
-	"github.com/AccelByte/extends-anti-churn/pkg/handler"
-	pb_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
-	pb_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
-	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
+	"github.com/AccelByte/extend-churn-intervention/pkg/common"
+	"github.com/AccelByte/extend-churn-intervention/pkg/handler"
+	pb_iam "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
+	pb_social "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extend-churn-intervention/pkg/pipeline"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/sirupsen/logrus"

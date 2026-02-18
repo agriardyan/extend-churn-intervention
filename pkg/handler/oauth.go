@@ -3,9 +3,9 @@ package handler
 import (
 	"context"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/common"
-	pb_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
-	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
+	"github.com/AccelByte/extend-churn-intervention/pkg/common"
+	pb_iam "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
+	"github.com/AccelByte/extend-churn-intervention/pkg/pipeline"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"

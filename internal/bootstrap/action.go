@@ -7,9 +7,9 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	actionBuiltin "github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
+	"github.com/AccelByte/extend-churn-intervention/pkg/action"
+	actionBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/action/builtin"
+	"github.com/AccelByte/extend-churn-intervention/pkg/pipeline"
 	"github.com/sirupsen/logrus"
 )
 

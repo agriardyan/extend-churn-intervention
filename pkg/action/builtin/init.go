@@ -1,8 +1,8 @@
 package builtin
 
 import (
-	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/action"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 )
 
 // Dependencies holds dependencies needed by built-in actions.

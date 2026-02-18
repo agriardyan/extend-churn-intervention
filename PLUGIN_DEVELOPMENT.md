@@ -47,9 +47,9 @@ package builtin
 
 import (
     "context"
-    "github.com/AccelByte/extends-anti-churn/pkg/signal"
-    "github.com/AccelByte/extends-anti-churn/pkg/service"
-    asyncapi_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+    "github.com/AccelByte/extend-churn-intervention/pkg/signal"
+    "github.com/AccelByte/extend-churn-intervention/pkg/service"
+    asyncapi_social "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 )
 
 type PlayerLevelEventProcessor struct {
@@ -111,7 +111,7 @@ package builtin
 
 import (
     "time"
-    "github.com/AccelByte/extends-anti-churn/pkg/signal"
+    "github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 const TypePlayerLevel = "player_level"
@@ -226,8 +226,8 @@ package handler
 
 import (
     "context"
-    pb_party "github.com/AccelByte/extends-anti-churn/pkg/pb/party/v1"
-    "github.com/AccelByte/extends-anti-churn/pkg/pipeline"
+    pb_party "github.com/AccelByte/extend-churn-intervention/pkg/pb/party/v1"
+    "github.com/AccelByte/extend-churn-intervention/pkg/pipeline"
 )
 
 type PartyEventHandler struct {
@@ -280,9 +280,9 @@ package builtin
 
 import (
     "context"
-    "github.com/AccelByte/extends-anti-churn/pkg/rule"
-    "github.com/AccelByte/extends-anti-churn/pkg/signal"
-    signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+    "github.com/AccelByte/extend-churn-intervention/pkg/rule"
+    "github.com/AccelByte/extend-churn-intervention/pkg/signal"
+    signalBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/signal/builtin"
 )
 
 const StuckPlayerRuleID = "stuck_player"
@@ -384,9 +384,9 @@ package builtin
 
 import (
     "context"
-    "github.com/AccelByte/extends-anti-churn/pkg/action"
-    "github.com/AccelByte/extends-anti-churn/pkg/rule"
-    "github.com/AccelByte/extends-anti-churn/pkg/signal"
+    "github.com/AccelByte/extend-churn-intervention/pkg/action"
+    "github.com/AccelByte/extend-churn-intervention/pkg/rule"
+    "github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 const SendPushNotificationActionID = "send_push_notification"
@@ -517,7 +517,7 @@ package builtin
 import (
     "context"
     "testing"
-    "github.com/AccelByte/extends-anti-churn/pkg/rule"
+    "github.com/AccelByte/extend-churn-intervention/pkg/rule"
 )
 
 func TestStuckPlayerRule_Evaluate(t *testing.T) {
@@ -577,7 +577,7 @@ func TestStuckPlayerPipeline(t *testing.T) {
 
 3. **Check logs:**
    ```bash
-   tail -f logs/anti-churn.log | grep "stuck_player"
+   tail -f logs/churn-intervention.log | grep "stuck_player"
    ```
 
 ---
@@ -678,7 +678,7 @@ When adding a new plugin, verify:
 - Check `CLAUDE.md` for architectural guidelines
 - Review existing implementations in `pkg/*/builtin/`
 - Run `make test` to verify your changes
-- Check logs for debugging: `tail -f logs/anti-churn.log`
+- Check logs for debugging: `tail -f logs/churn-intervention.log`
 
 ---
 

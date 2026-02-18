@@ -1,7 +1,7 @@
 package signal
 
 import (
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 )
 
 // BuildPlayerContext creates a PlayerContext from churn state.

@@ -3,7 +3,7 @@ package signal
 import (
 	"time"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 )
 
 // Signal represents a normalized domain event with player context.

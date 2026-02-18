@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
+	"github.com/AccelByte/extend-churn-intervention/pkg/pipeline"
 )
 
 func TestValidate_UnknownActionReference(t *testing.T) {

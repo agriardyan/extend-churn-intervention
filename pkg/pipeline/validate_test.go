@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/action"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 // mockRule for testing

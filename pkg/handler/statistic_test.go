@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	pb_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	pb_social "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
 	"github.com/alicebob/miniredis/v2"
 )
 

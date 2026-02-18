@@ -1,8 +1,8 @@
 package builtin
 
 import (
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 type EventProcessorDependencies struct {

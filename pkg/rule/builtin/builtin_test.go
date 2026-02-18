@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/signal/builtin"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 func TestRageQuitRule_Evaluate(t *testing.T) {
@@ -244,7 +244,7 @@ func TestSessionDeclineRule_Evaluate(t *testing.T) {
 			expectTrigger:       false,
 		},
 		{
-			name: "no decline - inactive last week",
+			name:           "no decline - inactive last week",
 			loginCountData: map[string]int{
 				// No entries - never active
 			},

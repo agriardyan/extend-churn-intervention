@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AccelByte/extends-anti-churn/internal/bootstrap"
-	"github.com/AccelByte/extends-anti-churn/internal/config"
-	"github.com/AccelByte/extends-anti-churn/internal/server"
-	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/internal/bootstrap"
+	"github.com/AccelByte/extend-churn-intervention/internal/config"
+	"github.com/AccelByte/extend-churn-intervention/internal/server"
+	"github.com/AccelByte/extend-churn-intervention/pkg/pipeline"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 	"github.com/cenkalti/backoff/v4"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
@@ -24,7 +24,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 
-	actionBuiltin "github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
+	actionBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/action/builtin"
 )
 
 // App holds all application dependencies and manages the application lifecycle.

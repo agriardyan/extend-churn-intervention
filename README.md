@@ -1,4 +1,4 @@
-# Anti-Churn Event Handler
+# Churn Intervention Event Handler
 
 A plugin-based event handler for the AccelByte Extends platform that detects player churn signals and triggers automated interventions.
 
@@ -6,10 +6,10 @@ A plugin-based event handler for the AccelByte Extends platform that detects pla
 
 This service listens to game events (OAuth logins, stat updates) via Kafka Connect, analyzes player behavior patterns, and triggers interventions (challenges, rewards) to re-engage at-risk players.
 
-**Example flow:**
-1. Player loses 5 matches in a row → `losing_streak` signal detected
-2. `losing-streak` rule triggers → Creates "Comeback Challenge" (win 3 matches in 7 days)
-3. Player completes challenge → `challenge-completion` rule triggers → Grants reward item
+**Example flows:**
+- Player loses 5 matches in a row → `losing_streak` signal → "Comeback Challenge" (win 3 matches in 7 days)
+- Player quits 3 times → `rage_quit` signal → "Comeback Challenge"
+- Player's weekly logins drop to 0 (was active last week) → `session_decline` signal → Grant reward item + email notification
 
 ## Architecture
 
@@ -27,70 +27,60 @@ Game Events → Signal Detection → Rule Evaluation → Action Execution
 - **Signal**: Normalized behavioral event (e.g., `login`, `rage_quit`, `losing_streak`)
 - **Rule**: Logic to detect churn risk (e.g., "5+ consecutive losses")
 - **Action**: Intervention to execute (e.g., create challenge, grant reward)
-- **Pipeline**: Orchestrates the full flow with configurable rule-to-action mappings
+- **Pipeline**: Orchestrates the full flow with configurable rule-to-action mappings in `config/pipeline.yaml`
 
 ## 🎯 Architectural Boundaries
 
 ### ✅ What This System SHOULD Do
 
-**Detection** - Identify churn risk signals:
-- Session decline patterns
+**Detection** — Identify churn risk signals:
+- Session decline patterns (weekly login count drops)
 - Losing streaks and rage quits
-- Challenge completion/failure
 - Other behavioral indicators of player disengagement
 
-**Intervention** - Execute retention strategies:
-- Create time-limited challenges
-- Grant rewards/items
-- Trigger notifications (future)
-- Record intervention history
+**Intervention** — Execute retention strategies:
+- Create time-limited comeback challenges
+- Grant reward items via AccelByte entitlements
+- Trigger email notifications
+- Record intervention history with cooldown management
 
 ### ❌ What This System SHOULD NOT Do
 
-**❌ DO NOT use this as a general game state manager**
-
 This system is **read-only** for game state. It REACTS to events, it does NOT maintain primary game state.
 
-**Examples of WRONG usage:**
-
 ```yaml
-# ❌ WRONG: Updating game stats
+# ❌ WRONG: Updating game stats (game server owns this)
 - id: record-wins
-  actions: [update-match-wins-stat]  # Game server owns this!
+  actions: [update-match-wins-stat]
 
-# ❌ WRONG: Managing challenge progress
+# ❌ WRONG: Managing challenge progress (challenge system owns this)
 - id: track-challenge
-  actions: [increment-challenge-progress]  # Challenge system owns this!
-
-# ❌ WRONG: Resetting player stats
-- id: reset-streak
-  actions: [reset-losing-streak-stat]  # Game server owns this!
+  actions: [increment-challenge-progress]
 ```
 
-**Examples of CORRECT usage:**
-
 ```yaml
-# ✅ CORRECT: Detecting churn and intervening
+# ✅ CORRECT: Detect churn and intervene
 - id: losing-streak
   type: losing_streak
-  actions: [dispatch-comeback-challenge]  # Create intervention
+  actions: [dispatch-comeback-challenge]
 
-# ✅ CORRECT: Rewarding completion
-- id: challenge-completion
-  type: challenge_completion
-  actions: [grant-item]  # Reward player
+# ✅ CORRECT: Session decline → reward + notify
+- id: session-decline
+  type: session_decline
+  actions: [grant-item, send-email-notification-after-granting-item]
 ```
 
 ### Ownership Boundaries
 
 | Component | Owner | Anti-Churn Role |
 |-----------|-------|----------------|
-| Game stats (`rse-match-wins`, `rse-current-losing-streak`) | Game Server | **Read Only** - Listen to events |
+| Game stats (`rse-match-wins`, `rse-current-losing-streak`, `rse-rage-quit`) | Game Server | **Read Only** - Listen to events |
 | Challenge progress tracking | Challenge System | **Read Only** - Listen to completion events |
 | Player sessions, login/logout | IAM Service | **Read Only** - Listen to OAuth events |
 | Churn detection logic | **Anti-Churn** | **Owns** - Implement rules |
 | Intervention execution | **Anti-Churn** | **Owns** - Create challenges, grant rewards |
-| Intervention history | **Anti-Churn** | **Owns** - Track what we did |
+| Intervention history & cooldowns | **Anti-Churn** | **Owns** - Track what we did |
+| Weekly login counts | **Anti-Churn** | **Owns** - `session_tracking:*` Redis keys |
 
 **Golden Rule**: If another system already owns it, we LISTEN to it, we don't UPDATE it.
 
@@ -131,60 +121,83 @@ Edit `config/pipeline.yaml` to configure detection rules and interventions:
 
 ```yaml
 rules:
-  - id: my-churn-rule
-    type: my_rule_type
+  - id: losing-streak
+    type: losing_streak
     enabled: true
-    actions: [my-action]
+    actions: [dispatch-comeback-challenge]
     parameters:
       threshold: 5
 
 actions:
-  - id: my-action
-    type: my_action_type
+  - id: dispatch-comeback-challenge
+    type: dispatch_comeback_challenge
     enabled: true
     parameters:
+      wins_needed: 3
       duration_days: 7
+      cooldown_hours: 168
 ```
+
+Supports `${ENV_VAR:default}` substitution in parameter values.
+
+## Built-in Rules
+
+| Rule ID | Type | Signal | Description |
+|---------|------|--------|-------------|
+| `rage-quit` | `rage_quit` | `rage_quit` | Triggers when quit count reaches threshold (default: 3) |
+| `losing-streak` | `losing_streak` | `losing_streak` | Triggers when consecutive losses reach threshold (default: 5) |
+| `session-decline` | `session_decline` | `login` | Triggers when player had activity in a past week but none this week (4-week detection window) |
+
+### Session Decline Detection
+
+The `session_decline` rule uses a map-based weekly tracking approach:
+
+- On every login, a weekly count is incremented in Redis (`session_tracking:{userID}` Hash key)
+- Weeks are keyed as `YYYYWW` (ISO week format, e.g., `"202610"`)
+- Data is retained for 4 weeks — handles gradual churn and multi-week absences
+- A player is considered churning if they had activity in any tracked week but have none in the current week
+
+## Built-in Actions
+
+| Action ID | Type | Description |
+|-----------|------|-------------|
+| `dispatch-comeback-challenge` | `dispatch_comeback_challenge` | Creates a time-limited challenge (win N matches in X days) |
+| `grant-item` | `grant_item` | Grants an item/entitlement via AccelByte platform (configurable via `REWARD_ITEM_ID` env var) |
+| `send-email-notification-after-granting-item` | `send_email_notification_after_granting_item` | No-op stub — extend to send real email notifications |
 
 ## Extending the System
 
-### Adding a New Churn Detection Rule
+See **`PLUGIN_DEVELOPMENT.md`** for a detailed developer guide with complete code templates.
 
-**Example**: Detect players who haven't logged in for 7 days
+For AI-assisted plugin creation, use the **`/add-plugin`** Claude Code skill which interactively generates all required files.
 
-1. **Create the rule** in `pkg/rule/builtin/`:
+### Quick Example: Adding a New Rule
+
+1. **Create the rule** in `pkg/rule/builtin/my_rule.go`:
 
 ```go
-type InactivityRule struct {
-    config rule.RuleConfig
+const MyRuleID = "my_rule"
+
+type MyRule struct {
+    config    rule.RuleConfig
+    threshold int
 }
 
-func (r *InactivityRule) Evaluate(ctx context.Context, sig signal.Signal) (bool, *rule.Trigger, error) {
-    // Only evaluate login signals
-    if sig.Type() != "login" {
+func (r *MyRule) Evaluate(ctx context.Context, sig signal.Signal) (bool, *rule.Trigger, error) {
+    if sig.Type() != signalBuiltin.TypeRageQuit {
         return false, nil, nil
     }
-
-    // Check if player hasn't logged in for 7+ days
-    lastLogin := sig.Context().State.Sessions.LastLogin
-    if time.Since(lastLogin) > 7*24*time.Hour {
-        return true, &rule.Trigger{
-            RuleID: r.config.ID,
-            UserID: sig.UserID(),
-            Reason: "Player inactive for 7+ days",
-        }, nil
-    }
-
-    return false, nil, nil
+    // ... detection logic ...
+    return true, rule.NewTrigger(r.ID(), sig.UserID(), "reason", r.config.Priority), nil
 }
 ```
 
 2. **Register it** in `pkg/rule/builtin/init.go`:
 
 ```go
-func RegisterRules() {
-    rule.RegisterRuleType("inactivity", func(config rule.RuleConfig) (rule.Rule, error) {
-        return NewInactivityRule(config), nil
+func RegisterRules(deps *Dependencies) {
+    rule.RegisterRuleType(MyRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
+        return NewMyRule(config), nil
     })
 }
 ```
@@ -193,57 +206,41 @@ func RegisterRules() {
 
 ```yaml
 rules:
-  - id: player-inactivity
-    type: inactivity
+  - id: my-detection
+    type: my_rule
     enabled: true
-    actions: [dispatch-comeback-challenge]
+    actions: [grant-item]
+    parameters:
+      threshold: 3
 ```
-
-### Adding a New Intervention Action
-
-**Example**: Send a push notification
-
-1. **Create the action** in `pkg/action/builtin/`:
-
-```go
-type PushNotificationAction struct {
-    config action.ActionConfig
-    notificationService NotificationService
-}
-
-func (a *PushNotificationAction) Execute(ctx context.Context, trigger *rule.Trigger, playerCtx *signal.PlayerContext) error {
-    message := "We miss you! Come back and claim your reward!"
-    return a.notificationService.Send(ctx, trigger.UserID, message)
-}
-```
-
-2. **Register and configure** (similar to rules)
-
-### Adding a New Signal Type
-
-See `CLAUDE.md` for detailed instructions on adding new event processors.
 
 ## Project Structure
 
 ```
 .
-├── cmd/                    # Entry points
-├── config/                 # Configuration files
-│   └── pipeline.yaml      # Rules and actions configuration
+├── config/
+│   └── pipeline.yaml              # Rules and actions configuration
 ├── pkg/
-│   ├── action/            # Intervention execution
-│   │   └── builtin/       # Built-in actions
-│   ├── handler/           # gRPC event handlers
-│   ├── pipeline/          # Pipeline orchestration
-│   ├── rule/              # Churn detection rules
-│   │   └── builtin/       # Built-in rules
-│   ├── signal/            # Event normalization
-│   │   └── builtin/       # Built-in signals
-│   ├── state/             # Player state management
-│   └── service/           # External service clients
-├── main.go                # Application entry point
-├── CLAUDE.md              # Developer guide for AI assistance
-└── README.md              # This file
+│   ├── action/                    # Intervention execution framework
+│   │   └── builtin/               # grant_item, dispatch_comeback_challenge, send_email
+│   ├── handler/                   # gRPC event handlers (OAuth, stat updates)
+│   ├── pipeline/                  # Pipeline orchestration and startup validation
+│   ├── rule/                      # Churn detection rule framework
+│   │   └── builtin/               # rage_quit, losing_streak, session_decline
+│   ├── service/                   # Service abstractions and state models
+│   │   ├── churn_state.go         # ChurnState, InterventionRecord, CooldownState
+│   │   ├── login_session_tracker.go  # Weekly session tracking (Redis Hash)
+│   │   └── interfaces.go          # StateStore, LoginSessionTracker, EntitlementGranter
+│   ├── signal/                    # Event normalization framework
+│   │   └── builtin/               # OAuth, rage_quit, losing_streak event processors
+│   └── common/                    # Logging, env helpers, OpenTelemetry
+├── .claude/
+│   └── skills/
+│       └── add-plugin/            # /add-plugin Claude Code skill
+├── main.go                        # Application entry point
+├── CLAUDE.md                      # AI developer guide
+├── PLUGIN_DEVELOPMENT.md          # Human developer guide for adding plugins
+└── README.md                      # This file
 ```
 
 ## Testing
@@ -254,6 +251,8 @@ make test
 
 # Run specific package tests
 go test -v ./pkg/rule/...
+go test -v ./pkg/signal/...
+go test -v ./pkg/action/...
 
 # Run with coverage
 go test -v -cover ./...
@@ -262,68 +261,29 @@ go test -v -cover ./...
 go test -v ./pkg/pipeline/...
 ```
 
-## Built-in Rules
-
-- **rage-quit**: Detects players who quit after consecutive losses
-- **losing-streak**: Detects extended losing streaks
-- **session-decline**: Detects significant drop in play sessions
-- **challenge-completion**: Grants rewards when challenges are completed
-
-## Built-in Actions
-
-- **dispatch-comeback-challenge**: Creates a time-limited challenge (win N matches in X days)
-- **grant-item**: Grants an item/entitlement to the player
-
-## Common Pitfalls
-
-### ❌ Don't Mix Concerns
-
-```yaml
-# WRONG: Anti-churn updating game stats
-- id: update-stats
-  type: stat_updater
-  actions: [increment-wins]  # Game server should do this!
-```
-
-### ❌ Don't Create Circular Dependencies
-
-```yaml
-# WRONG: Listening to stat event and updating same stat
-rules:
-  - id: record-wins
-    # Listens to rse-match-wins event
-    actions: [update-match-wins]  # Updates rse-match-wins (circular!)
-```
-
-### ❌ Don't Replace Existing Systems
-
-```yaml
-# WRONG: Challenge progress tracking should be in challenge system
-- id: track-challenge-progress
-  type: challenge_tracker
-  actions: [increment-progress]  # Not our responsibility!
-```
-
-### ✅ Do Focus on Detection + Intervention
-
-```yaml
-# CORRECT: Detect churn risk and trigger intervention
-- id: at-risk-player
-  type: losing_streak
-  actions: [dispatch-comeback-challenge, send-notification]  # Our job!
-```
-
 ## Deployment
 
-See `Dockerfile` and deployment documentation for production setup.
+```bash
+# Build Docker image
+make build
+
+# Docker image: extends-anti-churn:latest
+```
+
+The service requires the following environment variables (see `.env.template`):
+- `AB_BASE_URL`, `AB_CLIENT_ID`, `AB_CLIENT_SECRET`, `AB_NAMESPACE` — AccelByte credentials
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` — Redis connection
+- `REWARD_ITEM_ID` — Item ID to grant (default: `COMEBACK_REWARD`)
 
 ## Monitoring
 
-The service exposes Prometheus metrics on port 8080:
+Prometheus metrics are available on port 8080:
 
 ```
 http://localhost:8080/metrics
 ```
+
+The gRPC server listens on port 6565.
 
 ## Contributing
 
@@ -332,13 +292,6 @@ When adding new rules or actions:
 1. ✅ Ask: "Is this churn DETECTION or INTERVENTION?"
 2. ✅ Check: "Am I trying to maintain state that another system owns?"
 3. ✅ Verify: "Does this fit the read-react pattern?"
-4. ✅ Test: Write comprehensive unit tests
-5. ✅ Document: Update this README and CLAUDE.md
-
-## License
-
-[Add your license here]
-
-## Support
-
-For issues, questions, or contributions, please [add contact info or issue tracker link].
+4. ✅ Read: `PLUGIN_DEVELOPMENT.md` for the full guide
+5. ✅ Test: Write comprehensive unit tests
+6. ✅ Configure: Update `config/pipeline.yaml`

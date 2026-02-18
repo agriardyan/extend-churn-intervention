@@ -3,7 +3,7 @@ package builtin
 import (
 	"time"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 const (

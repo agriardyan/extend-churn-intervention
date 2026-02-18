@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	oauth "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	oauth "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 	"github.com/sirupsen/logrus"
 )
 

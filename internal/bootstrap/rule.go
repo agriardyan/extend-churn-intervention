@@ -7,10 +7,10 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/pipeline"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	ruleBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/rule/builtin"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 	"github.com/sirupsen/logrus"
 )
 

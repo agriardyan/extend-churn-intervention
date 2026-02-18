@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	statistic "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 // Signal type constants for built-in signals

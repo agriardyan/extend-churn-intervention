@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	pb_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
+	pb_iam "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
 	"github.com/alicebob/miniredis/v2"
 )
 

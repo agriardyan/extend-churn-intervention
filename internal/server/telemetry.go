@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/common"
+	"github.com/AccelByte/extend-churn-intervention/pkg/common"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
@@ -61,7 +61,7 @@ func SetupTelemetry(ctx context.Context, serviceName, environment string, id int
 	// ============================================================
 	otel.SetTextMapPropagator(
 		propagation.NewCompositeTextMapPropagator(
-			b3.New(),              // Zipkin B3 propagation
+			b3.New(),                   // Zipkin B3 propagation
 			propagation.TraceContext{}, // W3C Trace Context
 			propagation.Baggage{},      // W3C Baggage
 		),

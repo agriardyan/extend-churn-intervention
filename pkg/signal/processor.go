@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	oauth "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
-	statistic "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	oauth "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
+	statistic "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 )
 
 // Processor converts raw events into domain signals with enriched context.

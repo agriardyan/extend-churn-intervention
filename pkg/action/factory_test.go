@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	actionBuiltin "github.com/AccelByte/extends-anti-churn/pkg/action/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/action"
+	actionBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/action/builtin"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 )
 
 func init() {

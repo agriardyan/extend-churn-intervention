@@ -7,8 +7,8 @@ package main
 import (
 	"context"
 
-	"github.com/AccelByte/extends-anti-churn/internal/app"
-	"github.com/AccelByte/extends-anti-churn/internal/config"
+	"github.com/AccelByte/extend-churn-intervention/internal/app"
+	"github.com/AccelByte/extend-churn-intervention/internal/config"
 	"github.com/sirupsen/logrus"
 )
 

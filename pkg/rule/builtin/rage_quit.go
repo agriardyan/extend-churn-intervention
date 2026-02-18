@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/signal/builtin"
 	"github.com/sirupsen/logrus"
 )
 

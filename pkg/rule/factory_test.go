@@ -1,13 +1,14 @@
 package rule_test
 
 import (
-	"github.com/alicebob/miniredis/v2"
-	"github.com/go-redis/redis/v8"
 	"testing"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redis/redis/v8"
+
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	ruleBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/rule/builtin"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 )
 
 func init() {

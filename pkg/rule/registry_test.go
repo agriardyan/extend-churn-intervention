@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 // mockRule is a simple rule implementation for testing

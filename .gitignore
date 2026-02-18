@@ -148,7 +148,7 @@ localstack-data/
 
 # IDEs and editors
 main
-extends-anti-churn
+extend-churn-intervention
 churn-intervention
 cmd/test*
 test-*

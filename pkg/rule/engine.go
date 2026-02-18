@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 	"github.com/sirupsen/logrus"
 )
 

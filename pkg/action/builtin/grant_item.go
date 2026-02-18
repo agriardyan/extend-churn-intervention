@@ -9,10 +9,10 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/repository"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/platform"
-	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/action"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 	"github.com/sirupsen/logrus"
 )
 

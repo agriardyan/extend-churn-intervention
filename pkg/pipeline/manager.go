@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	asyncapi_iam "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
-	asyncapi_social "github.com/AccelByte/extends-anti-churn/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/action"
+	asyncapi_iam "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/iam/oauth/v1"
+	asyncapi_social "github.com/AccelByte/extend-churn-intervention/pkg/pb/accelbyte-asyncapi/social/statistic/v1"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 // Manager orchestrates the complete anti-churn pipeline:

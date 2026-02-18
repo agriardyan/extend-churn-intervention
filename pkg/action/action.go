@@ -3,8 +3,8 @@ package action
 import (
 	"context"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 // Action performs operations in response to triggers.

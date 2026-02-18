@@ -6,9 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Go-based churn intervention event handler for the AccelByte Extends platform. Detects player churn signals from game events and triggers automated interventions. Uses a plugin-based architecture with a Signal → Rule → Action pipeline.
 
+**Module**: `github.com/AccelByte/extend-churn-intervention`
+
 ## 🎯 Critical: System Scope and Boundaries
 
-**IMPORTANT**: This is an churn DETECTION and INTERVENTION system, NOT a general game state manager.
+**IMPORTANT**: This is a churn DETECTION and INTERVENTION system, NOT a general game state manager.
 
 ### What This System Does
 
@@ -19,7 +21,7 @@ Game Events (read-only) → Detect Pattern → Intervene
 ```
 
 **Valid operations:**
-- Listen to game stats events (`rse-match-wins`, `rse-current-losing-streak`)
+- Listen to game stats events (`rse-match-wins`, `rse-current-losing-streak`, `rse-rage-quit`)
 - Detect behavioral patterns (losing streaks, session decline, rage quits)
 - Create interventions (challenges, rewards)
 - Track intervention history (what we did, when, cooldowns)
@@ -40,12 +42,6 @@ Game Events (read-only) → Detect Pattern → Intervene
 type RecordWinsAction struct {}
 func (a *RecordWinsAction) Execute() error {
     return updateStatAPI("rse-match-wins", newValue)  // Game server owns this!
-}
-
-// ❌ WRONG: Challenge progress tracking
-type TrackChallengeProgressRule struct {}
-func (r *TrackChallengeProgressRule) Evaluate() {
-    incrementChallengeProgress()  // Challenge system owns this!
 }
 
 // ❌ WRONG: Circular dependency
@@ -72,18 +68,9 @@ func (a *ComebackChallengeAction) Execute() error {
     // Challenge system will track actual progress
     return createChallenge()
 }
-
-// ✅ CORRECT: Reacting to completion
-type ChallengeCompletionRule struct {}
-func (r *ChallengeCompletionRule) Evaluate() {
-    // Listen to challenge completion events
-    // Trigger reward if player completed our challenge
-}
 ```
 
 ### Ownership Table
-
-When implementing features, check this table:
 
 | Component | Owner | Our Role |
 |-----------|-------|----------|
@@ -93,6 +80,7 @@ When implementing features, check this table:
 | Churn detection rules | **Anti-Churn** | **Own** - Implement detection logic |
 | Intervention actions | **Anti-Churn** | **Own** - Create challenges, grant rewards |
 | Intervention history | **Anti-Churn** | **Own** - Track cooldowns, history |
+| Session login counts | **Anti-Churn** | **Own** - Track weekly login counts in `session_tracking:*` Redis keys |
 
 **Golden Rule**: If another system already owns it, we LISTEN to it, we don't UPDATE it.
 
@@ -106,26 +94,6 @@ Before implementing a new rule or action, ask:
 4. ❌ **Does this create a circular dependency?** (listening to event → updating same event source)
 
 If you answered YES to questions 3 or 4, **STOP** and reconsider the approach.
-
-### Valid Use Cases for New Features
-
-**Detection (Rules):**
-- New behavioral patterns indicating churn risk
-- Combinations of existing signals
-- Time-based patterns (hasn't logged in for N days)
-- Social patterns (clan inactivity, friends leaving)
-
-**Intervention (Actions):**
-- New types of challenges or goals
-- Different reward mechanisms
-- Notification/communication triggers
-- Cooldown and throttling strategies
-
-**Invalid Use Cases:**
-- Maintaining game statistics
-- Tracking real-time player progress
-- Updating data owned by game server or other services
-- Replacing existing platform functionality
 
 ## Common Commands
 
@@ -183,10 +151,7 @@ To add a new rule/action/signal: implement the interface, create a factory, regi
    }
 
    func NewOtherStatsEventProcessor(stateStore service.StateStore, namespace string) *OtherStatsEventProcessor {
-       return &OtherStatsEventProcessor{
-           stateStore: stateStore,
-           namespace:  namespace,
-       }
+       return &OtherStatsEventProcessor{stateStore: stateStore, namespace: namespace}
    }
 
    func (p *OtherStatsEventProcessor) EventType() string {
@@ -202,51 +167,66 @@ To add a new rule/action/signal: implement the interface, create a factory, regi
 
 3. Register it in `pkg/signal/builtin/event_processors.go`:
    ```go
-   func RegisterEventProcessors(registry *signal.EventProcessorRegistry, stateStore service.StateStore, namespace string) {
+   func RegisterEventProcessors(
+       registry *signal.EventProcessorRegistry,
+       stateStore service.StateStore,
+       namespace string,
+       deps *EventProcessorDependencies,
+   ) {
+       // ... existing processors ...
        registry.Register(NewOtherStatsEventProcessor(stateStore, namespace))
    }
    ```
 
-4. The signal processor will automatically route stat events with that stat code to your processor
+4. The signal processor will automatically route stat events with that stat code to your processor.
 
-**Adding a new event type (e.g., party events):**
+**Adding a new rule that needs a service dependency:**
 
-1. **Verify**: We're listening to party events to detect churn signals, not managing parties
+Rules that need service dependencies (e.g., `LoginSessionTracker`) receive them through the `Dependencies` struct in `pkg/rule/builtin/init.go`:
 
-2. Create an EventProcessor:
-   ```go
-   type PartyEventProcessor struct {
-       stateStore service.StateStore
-       namespace  string
-   }
+```go
+// In pkg/rule/builtin/init.go
+type Dependencies struct {
+    LoginSessionTracker service.LoginSessionTracker
+    // Add new dependencies here
+}
 
-   func (p *PartyEventProcessor) EventType() string {
-       return "party_disbanded"
-   }
-
-   func (p *PartyEventProcessor) Process(ctx context.Context, event interface{}) (signal.Signal, error) {
-       // Detect if this indicates social isolation (churn signal)
-   }
-   ```
-
-3. Register it in `pkg/signal/builtin/event_processors.go`
-4. In your handler, call `pipelineManager.ProcessEvent(ctx, "party_disbanded", event)`
-
-No changes to the pipeline manager needed - it's fully generic.
+func RegisterRules(deps *Dependencies) {
+    rule.RegisterRuleType(MyRuleID, func(config rule.RuleConfig) (rule.Rule, error) {
+        return NewMyRule(config, deps.LoginSessionTracker), nil
+    })
+}
+```
 
 ### Signal Processing
 
 The signal processor (`pkg/signal/processor.go`) uses a unified EventProcessor pattern:
 - OAuth events are routed to `OAuthEventProcessor` (event type: `"oauth_token_generated"`)
-- Stat events are routed by stat code to per-stat-code processors (e.g., `"rse-rage-quit"`, `"rse-current-losing-streak"`)
+  - Also calls `LoginSessionTracker.IncrementSessionCount()` to track weekly login counts
+- Stat events are routed by stat code to per-stat-code processors
 - Unknown stat codes fall back to generic `StatUpdateSignal`
 - All processors implement the same `EventProcessor` interface
 
 **Built-in signals:**
-- `login` — OAuth token generated (player login)
+- `login` — OAuth token generated (player login), also increments weekly session count
 - `rage_quit` — Player quit count from `rse-rage-quit` stat
 - `losing_streak` — Consecutive losses from `rse-current-losing-streak` stat
 - `match_win` — Total wins from `rse-match-wins` stat
+
+### Session Tracking (Weekly Map)
+
+The `LoginSessionTracker` service tracks weekly login counts using a Redis Hash with `YYYYWW` keys:
+
+```go
+type SessionTrackingData struct {
+    LoginCount map[string]int // Key: "YYYYWW" (e.g., "202610"), Value: login count
+}
+```
+
+- **Storage**: Redis Hash at key `session_tracking:{userID}`
+- **Operations**: `HINCRBY` for atomic increment, `HGETALL` for retrieval, `HDEL` for cleanup
+- **Retention**: 4 weeks (28 days TTL); entries older than 4 weeks are auto-deleted
+- **Churn detection**: `SessionDeclineRule` uses this map to detect players who had activity in any recent week but have none in the current week — handles multi-week absences correctly
 
 ### Startup Validation
 
@@ -258,8 +238,10 @@ The pipeline validates its wiring at startup (`pkg/pipeline/validate.go`):
 
 ### Key Packages
 
-- `pkg/state/` — Player churn state (sessions, challenges, interventions) persisted in Redis
-- `pkg/service/` — External service abstractions (Redis state store, AccelByte Platform entitlements)
+- `pkg/service/` — External service abstractions and state models:
+  - `churn_state.go` — `ChurnState`, `InterventionRecord`, `CooldownState` models
+  - `login_session_tracker.go` — `SessionTrackingData` and `RedisLoginSessionTrackingStore`
+  - `interfaces.go` — `StateStore`, `LoginSessionTracker`, `EntitlementGranter` interfaces
 - `pkg/common/` — Logging, env helpers, OpenTelemetry setup
 - `pkg/pb/` — Generated protobuf code (do not edit manually)
 - `pkg/pipeline/` — Pipeline orchestration, configuration, and validation
@@ -287,10 +269,14 @@ When adding new functionality, look for the section markers in `main.go`:
 
 ```go
 // DEVELOPER: Register your event processors here.
-signalBuiltin.RegisterEventProcessors(processor.GetEventProcessorRegistry())
+signalBuiltin.RegisterEventProcessors(processor.GetEventProcessorRegistry(), stateStore, namespace, &signalBuiltin.EventProcessorDependencies{
+    LoginTrackingStore: loginSessionTracker,
+})
 
 // DEVELOPER: Register your rule types here.
-ruleBuiltin.RegisterRules()
+ruleBuiltin.RegisterRules(&ruleBuiltin.Dependencies{
+    LoginSessionTracker: loginSessionTracker,
+})
 
 // DEVELOPER: Register your action types here.
 actionBuiltin.RegisterActions(deps)
@@ -300,6 +286,10 @@ pb_iam.RegisterOauthTokenOauthTokenGeneratedServiceServer(s, oauthListener)
 ```
 
 These markers identify the four extension points for the pluggable architecture.
+
+For a detailed developer walkthrough with code templates, see **`PLUGIN_DEVELOPMENT.md`**.
+
+You can also use the `/add-plugin` Claude Code skill to interactively generate new plugin code.
 
 ## Testing
 
@@ -311,18 +301,6 @@ Each package has comprehensive tests:
 - `pkg/handler/` — Handler tests with mock pipeline
 
 Run tests with `make test` or `go test ./...`
-
-## Branch Context
-
-The `feat/plugin-based` branch contains the current plugin-based architecture with:
-- Unified EventProcessor pattern (no SignalMapper abstraction)
-- Generic pipeline manager (`ProcessEvent` method)
-- Startup validation
-- Renamed `examples/` → `builtin/`
-- Consistent signal naming (`login` instead of `oauth_token_generated`)
-- Explicit dependency injection for event processors
-
-The `main` branch has the original implementation.
 
 ## When User Requests Are Out of Scope
 

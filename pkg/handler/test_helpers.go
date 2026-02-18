@@ -3,12 +3,12 @@ package handler
 import (
 	"context"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
-	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	"github.com/AccelByte/extend-churn-intervention/pkg/action"
+	"github.com/AccelByte/extend-churn-intervention/pkg/pipeline"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
+	signalBuiltin "github.com/AccelByte/extend-churn-intervention/pkg/signal/builtin"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
 )

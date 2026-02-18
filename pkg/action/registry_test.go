@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 // mockAction is a simple action implementation for testing

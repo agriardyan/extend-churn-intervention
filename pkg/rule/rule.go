@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/signal"
+	"github.com/AccelByte/extend-churn-intervention/pkg/signal"
 )
 
 // Rule evaluates signals and emits triggers when conditions are met.

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 )
 
 func TestStatUpdateSignal(t *testing.T) {

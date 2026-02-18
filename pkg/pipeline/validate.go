@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AccelByte/extends-anti-churn/pkg/action"
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/action"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
 )
 
 // ValidateWiring validates that the pipeline is correctly wired.

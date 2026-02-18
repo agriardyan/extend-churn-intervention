@@ -1,4 +1,4 @@
-module github.com/AccelByte/extends-anti-churn
+module github.com/AccelByte/extend-churn-intervention
 
 go 1.23.0
 

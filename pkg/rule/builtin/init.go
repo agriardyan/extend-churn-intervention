@@ -1,8 +1,8 @@
 package builtin
 
 import (
-	"github.com/AccelByte/extends-anti-churn/pkg/rule"
-	"github.com/AccelByte/extends-anti-churn/pkg/service"
+	"github.com/AccelByte/extend-churn-intervention/pkg/rule"
+	"github.com/AccelByte/extend-churn-intervention/pkg/service"
 )
 
 // Dependencies holds dependencies needed by built-in rules.
