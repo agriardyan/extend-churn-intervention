@@ -1,4 +1,4 @@
-module github.com/AccelByte/extends-anti-churn
+module github.com/AccelByte/extend-churn-intervention
 
 go 1.23.0
 
@@ -7,6 +7,8 @@ toolchain go1.23.2
 require (
 	github.com/AccelByte/accelbyte-go-sdk v0.85.0
 	github.com/alicebob/miniredis/v2 v2.35.0
+	github.com/caarlos0/env/v10 v10.0.0
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/joho/godotenv v1.5.1
@@ -20,6 +22,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0
 	google.golang.org/grpc v1.75.0
 	google.golang.org/protobuf v1.36.8
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

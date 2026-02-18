@@ -1,0 +1,52 @@
+# Anti-Churn Pipeline Configuration
+# This file defines the rules and actions for the anti-churn system.
+
+# Rules detect churn signals and trigger actions
+rules:
+  # Rage Quit Rule - Detects when a player quits after consecutive losses
+  - id: rage-quit
+    type: rage_quit
+    enabled: true
+    actions: [dispatch-comeback-challenge]  # Actions to execute when triggered
+    parameters:
+      threshold: 3  # Number of consecutive losses before triggering
+
+  # Losing Streak Rule - Detects extended losing streaks
+  - id: losing-streak
+    type: losing_streak
+    enabled: true
+    actions: [dispatch-comeback-challenge]  # Same actions as rage quit
+    parameters:
+      threshold: 5  # Number of consecutive losses
+
+  # Session Decline Rule - Detects significant drop in play sessions
+  - id: session-decline
+    type: session_decline
+    enabled: true
+    actions: [grant-item, send-email-notification-after-granting-item]  # Actions to execute when triggered
+    parameters:
+      decline_threshold: 0.5  # 50% decline from last week
+      min_sessions_last_week: 3  # Minimum sessions last week to qualify
+
+# Actions are executed when rules trigger
+actions:
+  # Comeback Challenge - Creates a time-limited challenge
+  - id: dispatch-comeback-challenge
+    type: dispatch_comeback_challenge
+    enabled: true
+    parameters:
+      wins_needed: 3
+      duration_days: 7
+      cooldown_hours: 168  # 7 days between challenges
+
+  # Grant Item - Rewards the player with an item
+  - id: grant-item
+    type: grant_item
+    enabled: true
+    parameters:
+      item_id: ${REWARD_ITEM_ID:COMEBACK_REWARD}
+      quantity: 1
+
+  - id: send-email-notification-after-granting-item
+    type: send_email_notification_after_granting_item
+    enabled: true
