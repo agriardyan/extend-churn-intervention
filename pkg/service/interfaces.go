@@ -26,3 +26,14 @@ type StateStore interface {
 	GetChurnState(ctx context.Context, userID string) (*ChurnState, error)
 	UpdateChurnState(ctx context.Context, userID string, state *ChurnState) error
 }
+
+type LoginSessionTracker interface {
+	// IncrementSessionCount increments the session count for a user.
+	IncrementSessionCount(ctx context.Context, userID string) error
+
+	// GetSessionData retrieves session tracking data for a user.
+	GetSessionData(ctx context.Context, userID string) (*SessionTrackingData, error)
+
+	// SaveSessionData saves session tracking data for a user.
+	SaveSessionData(ctx context.Context, userID string, data *SessionTrackingData) error
+}

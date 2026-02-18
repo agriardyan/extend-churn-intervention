@@ -23,23 +23,10 @@ rules:
   - id: session-decline
     type: session_decline
     enabled: true
-    actions: [dispatch-comeback-challenge]  # Only challenge, no item grant
+    actions: [grant-item, send-email-notification-after-granting-item]  # Actions to execute when triggered
     parameters:
       decline_threshold: 0.5  # 50% decline from last week
       min_sessions_last_week: 3  # Minimum sessions last week to qualify
-
-  # Challenge Completion Rule - Grants item upon challenge completion
-  # This rule listens for challenge completion events. When a player
-  # completes the comeback challenge, they are rewarded with an item.
-  # The rule should check whether user has the challenge. 
-  # Normally challenge created by rules like losing_streak, rage_quit, session_decline.
-  - id: challenge-completion
-    type: challenge_completion
-    enabled: true
-    actions: [grant-item]  # Grant item upon challenge completion
-    parameters:
-      wins_needed: 3
-      challenge_id: dispatch-comeback-challenge
 
 # Actions are executed when rules trigger
 actions:
@@ -59,3 +46,7 @@ actions:
     parameters:
       item_id: ${REWARD_ITEM_ID:COMEBACK_REWARD}
       quantity: 1
+
+  - id: send-email-notification-after-granting-item
+    type: send_email_notification_after_granting_item
+    enabled: true

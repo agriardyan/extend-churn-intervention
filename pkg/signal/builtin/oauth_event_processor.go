@@ -13,15 +13,21 @@ import (
 
 // OAuthEventProcessor processes OAuth token generation events into login signals.
 type OAuthEventProcessor struct {
-	stateStore service.StateStore
-	namespace  string
+	stateStore         service.StateStore
+	loginTrackingStore service.LoginSessionTracker
+	namespace          string
 }
 
 // NewOAuthEventProcessor creates a new OAuth event processor.
-func NewOAuthEventProcessor(stateStore service.StateStore, namespace string) *OAuthEventProcessor {
+func NewOAuthEventProcessor(
+	stateStore service.StateStore,
+	loginTrackingStore service.LoginSessionTracker,
+	namespace string,
+) *OAuthEventProcessor {
 	return &OAuthEventProcessor{
-		stateStore: stateStore,
-		namespace:  namespace,
+		stateStore:         stateStore,
+		loginTrackingStore: loginTrackingStore,
+		namespace:          namespace,
 	}
 }
 
@@ -44,10 +50,18 @@ func (p *OAuthEventProcessor) Process(ctx context.Context, event interface{}) (s
 		return nil, fmt.Errorf("user ID is empty in oauth event")
 	}
 
-	// Load player context
+	// Load player context (core churn state)
 	churnState, err := p.stateStore.GetChurnState(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load churn state for user %s: %w", userID, err)
+	}
+
+	// Increment session count in rule-specific storage
+	// This is tracking telemetry for the session_decline rule
+	err = p.loginTrackingStore.IncrementSessionCount(ctx, userID)
+	if err != nil {
+		logrus.Errorf("failed to increment session count for user %s: %v", userID, err)
+		// Don't fail the signal processing if session tracking fails
 	}
 
 	playerCtx := signal.BuildPlayerContext(userID, p.namespace, churnState)

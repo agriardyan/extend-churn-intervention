@@ -28,11 +28,6 @@ func (m *mockStateStore) GetChurnState(ctx context.Context, userID string) (*ser
 	}
 	// Return new state if not found
 	return &service.ChurnState{
-		Sessions: service.SessionState{
-			ThisWeek:  0,
-			LastWeek:  0,
-			LastReset: time.Now(),
-		},
 		SignalHistory:       []service.ChurnSignal{},
 		InterventionHistory: []service.InterventionRecord{},
 		Cooldown: service.CooldownState{

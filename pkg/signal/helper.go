@@ -14,9 +14,7 @@ func BuildPlayerContext(userID, namespace string, churnState *service.ChurnState
 		SessionInfo: make(map[string]interface{}),
 	}
 
-	// Add session metadata
-	playerContext.SessionInfo["sessions_this_week"] = churnState.Sessions.ThisWeek
-	playerContext.SessionInfo["sessions_last_week"] = churnState.Sessions.LastWeek
+	// Add churn state metadata
 	playerContext.SessionInfo["active_interventions"] = len(churnState.GetActiveInterventions())
 	playerContext.SessionInfo["on_cooldown"] = churnState.Cooldown.IsOnCooldown()
 

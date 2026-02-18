@@ -31,7 +31,11 @@ import (
 // - Stat updates (match wins, losses, streaks) → game signals
 // - Custom stat codes → custom signals
 // ============================================================
-func InitSignalProcessor(stateStore service.StateStore, namespace string) *signal.Processor {
+func InitSignalProcessor(
+	stateStore service.StateStore,
+	loginTrackingStore service.LoginSessionTracker,
+	namespace string,
+) *signal.Processor {
 	processor := signal.NewProcessor(stateStore, namespace)
 
 	// ============================================================
@@ -44,6 +48,16 @@ func InitSignalProcessor(stateStore service.StateStore, namespace string) *signa
 		processor.GetEventProcessorRegistry(),
 		processor.GetStateStore(),
 		processor.GetNamespace(),
+
+		// DEVELOPER: Pass dependencies needed by event processors here
+		// ============================================================
+		// If your event processors need external dependencies (e.g., login session tracking),
+		// add them to the EventProcessorDependencies struct in
+		// pkg/signal/builtin/event_processors.go and pass them here.
+		// ============================================================
+		&signalBuiltin.EventProcessorDependencies{
+			LoginTrackingStore: loginTrackingStore,
+		},
 	)
 
 	logrus.Infof("initialized signal processor with %d event processors",

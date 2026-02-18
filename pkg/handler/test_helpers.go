@@ -20,7 +20,8 @@ func setupTestPipeline(namespace string, mr *miniredis.Miniredis) *pipeline.Mana
 	})
 
 	// Create signal processor with Redis state store
-	stateStore := service.NewRedisStateStore(client, service.RedisStateStoreConfig{})
+	stateStore := service.NewRedisChurnStateStore(client, service.RedisChurnStateStoreConfig{})
+	loginSessionTrackingStore := service.NewRedisLoginSessionTrackingStore(client, service.RedisLoginSessionTrackingStoreConfig{})
 	processor := signal.NewProcessor(stateStore, namespace)
 
 	// Register builtin event processors
@@ -28,6 +29,9 @@ func setupTestPipeline(namespace string, mr *miniredis.Miniredis) *pipeline.Mana
 		processor.GetEventProcessorRegistry(),
 		processor.GetStateStore(),
 		processor.GetNamespace(),
+		&signalBuiltin.EventProcessorDependencies{
+			LoginTrackingStore: loginSessionTrackingStore,
+		},
 	)
 
 	// Create rule registry and engine
@@ -52,6 +56,6 @@ func getRedisClient(mr *miniredis.Miniredis) *redis.Client {
 
 // getStateFromRedis retrieves churn state from Redis
 func getStateFromRedis(ctx context.Context, client *redis.Client, userID string) (*service.ChurnState, error) {
-	stateStore := service.NewRedisStateStore(client, service.RedisStateStoreConfig{})
+	stateStore := service.NewRedisChurnStateStore(client, service.RedisChurnStateStoreConfig{})
 	return stateStore.GetChurnState(ctx, userID)
 }

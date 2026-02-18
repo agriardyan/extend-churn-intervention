@@ -1,16 +1,25 @@
 package rule_test
 
 import (
+	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redis/redis/v8"
 	"testing"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
 func init() {
 	// Register builtin rules for all tests
-	// Pass nil dependencies - tests will mock as needed
-	ruleBuiltin.RegisterRules()
+	mr, _ := miniredis.Run()
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	defer redisClient.Close()
+
+	sessionTracker := service.NewRedisLoginSessionTrackingStore(redisClient, service.RedisLoginSessionTrackingStoreConfig{})
+	deps := &ruleBuiltin.Dependencies{LoginSessionTracker: sessionTracker}
+	ruleBuiltin.RegisterRules(deps)
 }
 
 const (

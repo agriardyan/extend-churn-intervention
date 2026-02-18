@@ -31,4 +31,9 @@ func RegisterActions(deps *Dependencies) {
 	action.RegisterActionType(GrantItemActionID, func(config action.ActionConfig) (action.Action, error) {
 		return NewGrantItemAction(config, deps.EntitlementGranter, deps.Namespace), nil
 	})
+
+	// Register send email notification action
+	action.RegisterActionType(SendEmailActionID, func(config action.ActionConfig) (action.Action, error) {
+		return NewSendEmailAction(config), nil
+	})
 }

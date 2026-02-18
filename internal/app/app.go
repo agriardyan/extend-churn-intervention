@@ -63,7 +63,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	app := &App{cfg: cfg}
 
 	// ============================================================
-	// Step 1: Initialize AccelByte SDK
+	// Step 1: Initialize Client Auth using AccelByte SDK
 	// ============================================================
 	if err := app.initAccelByteSDKAuth(); err != nil {
 		return nil, fmt.Errorf("failed to init AccelByte SDK: %w", err)
@@ -96,7 +96,8 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	//
 	// Then pass these services to the bootstrap functions below.
 	// ============================================================
-	stateStore := service.NewRedisStateStore(app.redisClient, service.RedisStateStoreConfig{})
+	stateStore := service.NewRedisChurnStateStore(app.redisClient, service.RedisChurnStateStoreConfig{})
+	loginTrackingStore := service.NewRedisLoginSessionTrackingStore(app.redisClient, service.RedisLoginSessionTrackingStoreConfig{})
 	itemGranter := app.initItemGranter()
 	userStatUpdater := app.initStatisticService()
 
@@ -107,11 +108,15 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	// Signal Processor → Rule Engine → Action Executor → Pipeline Manager
 	//
 	// DEVELOPER: If your custom actions need external services,
-	// wrap them in actionBuiltin.Dependencies and pass them to InitActionExecutor (see bootstrap/action.go).
+	// wrap them in signalBuiltin.Dependencies and pass them to InitSignalProcessor (see bootstrap/signal.go).
 	// ============================================================
-	processor := bootstrap.InitSignalProcessor(stateStore, cfg.ABNamespace)
+	processor := bootstrap.InitSignalProcessor(
+		stateStore,
+		loginTrackingStore,
+		cfg.ABNamespace,
+	)
 
-	ruleEngine, ruleRegistry, err := bootstrap.InitRuleEngine(pipelineConfig)
+	ruleEngine, ruleRegistry, err := bootstrap.InitRuleEngine(pipelineConfig, loginTrackingStore)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init rule engine: %w", err)
 	}

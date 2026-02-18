@@ -13,6 +13,8 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redis/redis/v8"
 )
 
 // mockRule for testing
@@ -114,11 +116,20 @@ func (m *mockStateStore) UpdateChurnState(ctx context.Context, userID string, st
 func setupTestProcessor(stateStore service.StateStore) *signal.Processor {
 	processor := signal.NewProcessor(stateStore, "test")
 
+	// Create miniredis for testing
+	mr, _ := miniredis.Run()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	loginSessionTracker := service.NewRedisLoginSessionTrackingStore(redisClient, service.RedisLoginSessionTrackingStoreConfig{})
+
 	// Register builtin event processors
 	signalBuiltin.RegisterEventProcessors(
 		processor.GetEventProcessorRegistry(),
 		processor.GetStateStore(),
 		processor.GetNamespace(),
+		&signalBuiltin.EventProcessorDependencies{
+			LoginTrackingStore: loginSessionTracker,
+		},
 	)
 
 	return processor
@@ -172,12 +183,7 @@ func TestProcessOAuthEvent_WithRuleTrigger(t *testing.T) {
 
 	// Setup state store with session data to trigger session decline
 	stateStore := &mockStateStore{
-		state: &service.ChurnState{
-			Sessions: service.SessionState{
-				ThisWeek: 10,
-				LastWeek: 20, // 50% decline
-			},
-		},
+		state: &service.ChurnState{},
 	}
 	processor := setupTestProcessor(stateStore)
 

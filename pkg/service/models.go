@@ -10,20 +10,14 @@ import (
 
 // ChurnState represents anti-churn detection and intervention history for a player.
 // This is the ONLY state that the anti-churn system owns and manages.
+//
+// NOTE: This model is GENERIC and contains NO strategy-specific tracking data.
+// Individual rules (e.g., session_decline, spending_decline) manage their own
+// tracking data in separate storage to maintain extensibility.
 type ChurnState struct {
-	Sessions            SessionState         `json:"sessions"`
 	SignalHistory       []ChurnSignal        `json:"signalHistory"`
 	InterventionHistory []InterventionRecord `json:"interventionHistory"`
 	Cooldown            CooldownState        `json:"cooldown"`
-}
-
-// SessionState caches session data from IAM events (read-only cache).
-// We DO NOT maintain these counts - we only cache what we see from events.
-// The IAM/Session service is the source of truth.
-type SessionState struct {
-	ThisWeek  int       `json:"thisWeek"`
-	LastWeek  int       `json:"lastWeek"`
-	LastReset time.Time `json:"lastReset"`
 }
 
 // ChurnSignal represents a detected churn risk signal.

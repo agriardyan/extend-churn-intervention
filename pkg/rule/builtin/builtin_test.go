@@ -2,12 +2,15 @@ package builtin
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	"github.com/AccelByte/extends-anti-churn/pkg/signal"
 	signalBuiltin "github.com/AccelByte/extends-anti-churn/pkg/signal/builtin"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redis/redis/v8"
 	"github.com/AccelByte/extends-anti-churn/pkg/service"
 )
 
@@ -197,22 +200,32 @@ func TestLosingStreakRule_Evaluate(t *testing.T) {
 
 func TestSessionDeclineRule_Evaluate(t *testing.T) {
 	now := time.Now()
-	eightDaysAgo := now.Add(-8 * 24 * time.Hour)
 	expiresAt := now.Add(7 * 24 * time.Hour)
 
+	// Helper to get yearWeek format
+	getYearWeek := func(t time.Time) string {
+		year, week := t.ISOWeek()
+		return fmt.Sprintf("%04d%02d", year, week)
+	}
+
+	currentWeek := getYearWeek(now)
+	lastWeek := getYearWeek(now.Add(-7 * 24 * time.Hour))
+	twoWeeksAgo := getYearWeek(now.Add(-14 * 24 * time.Hour))
+	threeWeeksAgo := getYearWeek(now.Add(-21 * 24 * time.Hour))
+	fourWeeksAgo := getYearWeek(now.Add(-28 * 24 * time.Hour))
+
 	tests := []struct {
-		name                    string
-		sessionState            service.SessionState
-		cooldownState           service.CooldownState
-		interventionHistory     []service.InterventionRecord
-		expectTrigger           bool
+		name                string
+		loginCountData      map[string]int // yearWeek -> count
+		cooldownState       service.CooldownState
+		interventionHistory []service.InterventionRecord
+		expectTrigger       bool
 	}{
 		{
 			name: "session decline detected",
-			sessionState: service.SessionState{
-				LastWeek:  5,
-				ThisWeek:  0,
-				LastReset: eightDaysAgo,
+			loginCountData: map[string]int{
+				lastWeek: 5, // Active last week
+				// currentWeek: 0 (implicit - no entry means 0)
 			},
 			cooldownState: service.CooldownState{
 				CooldownUntil: time.Time{}, // No cooldown
@@ -222,32 +235,28 @@ func TestSessionDeclineRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "no decline - active this week",
-			sessionState: service.SessionState{
-				LastWeek:  5,
-				ThisWeek:  3,
-				LastReset: eightDaysAgo,
+			loginCountData: map[string]int{
+				lastWeek:    5, // Active last week
+				currentWeek: 3, // Still active this week
 			},
-			cooldownState: service.CooldownState{},
+			cooldownState:       service.CooldownState{},
 			interventionHistory: []service.InterventionRecord{},
 			expectTrigger:       false,
 		},
 		{
 			name: "no decline - inactive last week",
-			sessionState: service.SessionState{
-				LastWeek:  0,
-				ThisWeek:  0,
-				LastReset: eightDaysAgo,
+			loginCountData: map[string]int{
+				// No entries - never active
 			},
-			cooldownState: service.CooldownState{},
+			cooldownState:       service.CooldownState{},
 			interventionHistory: []service.InterventionRecord{},
 			expectTrigger:       false,
 		},
 		{
 			name: "decline but in cooldown",
-			sessionState: service.SessionState{
-				LastWeek:  5,
-				ThisWeek:  0,
-				LastReset: eightDaysAgo,
+			loginCountData: map[string]int{
+				lastWeek: 5, // Active last week
+				// currentWeek: 0 (no activity)
 			},
 			cooldownState: service.CooldownState{
 				CooldownUntil: now.Add(24 * time.Hour), // Still in cooldown
@@ -257,10 +266,9 @@ func TestSessionDeclineRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "decline but comeback challenge active",
-			sessionState: service.SessionState{
-				LastWeek:  5,
-				ThisWeek:  0,
-				LastReset: eightDaysAgo,
+			loginCountData: map[string]int{
+				lastWeek: 5, // Active last week
+				// currentWeek: 0 (no activity)
 			},
 			cooldownState: service.CooldownState{},
 			interventionHistory: []service.InterventionRecord{
@@ -275,6 +283,48 @@ func TestSessionDeclineRule_Evaluate(t *testing.T) {
 			},
 			expectTrigger: false,
 		},
+		{
+			name: "multi-week absence - had activity 2 weeks ago",
+			loginCountData: map[string]int{
+				twoWeeksAgo: 7, // Active 2 weeks ago
+				// lastWeek: 0, currentWeek: 0 (absent for 2 weeks)
+			},
+			cooldownState:       service.CooldownState{},
+			interventionHistory: []service.InterventionRecord{},
+			expectTrigger:       true, // Should detect churn from any recent week
+		},
+		{
+			name: "3-week absence - vacation/busy period",
+			loginCountData: map[string]int{
+				threeWeeksAgo: 15, // Very active 3 weeks ago
+				// Absent for 3 weeks (vacation, busy at work, etc.)
+			},
+			cooldownState:       service.CooldownState{},
+			interventionHistory: []service.InterventionRecord{},
+			expectTrigger:       true, // 4-week retention catches this!
+		},
+		{
+			name: "4-week absence - at retention boundary",
+			loginCountData: map[string]int{
+				fourWeeksAgo: 20, // Very active 4 weeks ago
+				// Absent for 4 weeks
+			},
+			cooldownState:       service.CooldownState{},
+			interventionHistory: []service.InterventionRecord{},
+			expectTrigger:       true, // Still within 4-week retention window
+		},
+		{
+			name: "gradual decline over 3 weeks",
+			loginCountData: map[string]int{
+				threeWeeksAgo: 10, // High activity
+				twoWeeksAgo:   5,  // Declining
+				lastWeek:      2,  // Very low
+				// currentWeek: 0 (churned)
+			},
+			cooldownState:       service.CooldownState{},
+			interventionHistory: []service.InterventionRecord{},
+			expectTrigger:       true, // Detect gradual churn pattern
+		},
 	}
 
 	for _, tt := range tests {
@@ -286,10 +336,25 @@ func TestSessionDeclineRule_Evaluate(t *testing.T) {
 				Priority: 10,
 			}
 
-			rule := NewSessionDeclineRule(config)
+			mr, _ := miniredis.Run()
+			defer mr.Close()
+			redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+			defer redisClient.Close()
+
+			// Create login session tracker
+			sessionTracker := service.NewRedisLoginSessionTrackingStore(redisClient, service.RedisLoginSessionTrackingStoreConfig{})
+
+			// Set up session data in Redis using map structure
+			if len(tt.loginCountData) > 0 {
+				sessionData := &service.SessionTrackingData{
+					LoginCount: tt.loginCountData,
+				}
+				sessionTracker.SaveSessionData(context.Background(), "test-user", sessionData)
+			}
+
+			rule := NewSessionDeclineRule(config, sessionTracker)
 
 			playerState := &service.ChurnState{
-				Sessions:            tt.sessionState,
 				Cooldown:            tt.cooldownState,
 				InterventionHistory: tt.interventionHistory,
 				SignalHistory:       []service.ChurnSignal{},
@@ -334,7 +399,12 @@ func TestSessionDeclineRule_NoPlayerContext(t *testing.T) {
 		Priority: 10,
 	}
 
-	rule := NewSessionDeclineRule(config)
+	mr, _ := miniredis.Run()
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	defer redisClient.Close()
+	sessionTracker := service.NewRedisLoginSessionTrackingStore(redisClient, service.RedisLoginSessionTrackingStoreConfig{})
+	rule := NewSessionDeclineRule(config, sessionTracker)
 
 	// Create signal without player context
 	sig := signalBuiltin.NewLoginSignal("test-user", time.Now(), nil)

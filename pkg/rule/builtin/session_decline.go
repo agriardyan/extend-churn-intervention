@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
@@ -17,17 +18,18 @@ const (
 )
 
 // SessionDeclineRule detects when a player's session frequency declines week-over-week.
-// This rule uses the weekly reset logic to determine if a player was active last week
-// but has not been active this week, indicating potential churn.
+// This rule uses LoginSessionTracker to access session tracking data.
 type SessionDeclineRule struct {
-	config rule.RuleConfig
+	config         rule.RuleConfig
+	sessionTracker service.LoginSessionTracker
 }
 
 // NewSessionDeclineRule creates a new session decline detection rule.
-func NewSessionDeclineRule(config rule.RuleConfig) *SessionDeclineRule {
+func NewSessionDeclineRule(config rule.RuleConfig, sessionTracker service.LoginSessionTracker) *SessionDeclineRule {
 	logrus.Infof("creating session decline rule")
 	return &SessionDeclineRule{
-		config: config,
+		config:         config,
+		sessionTracker: sessionTracker,
 	}
 }
 
@@ -53,7 +55,7 @@ func (r *SessionDeclineRule) Config() rule.RuleConfig {
 
 // Evaluate checks if a player's session frequency has declined.
 func (r *SessionDeclineRule) Evaluate(ctx context.Context, sig signal.Signal) (bool, *rule.Trigger, error) {
-	// Get player context
+	// Get player context (for cooldown and intervention checks)
 	playerCtx := sig.Context()
 	if playerCtx == nil || playerCtx.State == nil {
 		logrus.Debugf("no player context for user %s, skipping session decline check", sig.UserID())
@@ -63,18 +65,16 @@ func (r *SessionDeclineRule) Evaluate(ctx context.Context, sig signal.Signal) (b
 	now := sig.Timestamp()
 	playerState := playerCtx.State
 
-	// Check if player is churning BEFORE doing weekly reset
-	// (weekly reset moves ThisWeek to LastWeek, so we need to check first)
-	isChurning := isChurning(playerState, now)
-
-	// Perform weekly reset if needed
-	resetOccurred := checkWeeklyReset(playerState, now)
-	if resetOccurred {
-		logrus.Debugf("weekly reset occurred for user %s", sig.UserID())
+	// Load session tracking data from session tracker service
+	sessionData, err := r.sessionTracker.GetSessionData(ctx, sig.UserID())
+	if err != nil {
+		logrus.Errorf("failed to load session data for user %s: %v", sig.UserID(), err)
+		return false, nil, err
 	}
 
-	// Use the churn status from before the reset
-	if !isChurning {
+	// Check if player is churning using the map-based data
+	churning := isChurning(sessionData, now)
+	if !churning {
 		return false, nil, nil
 	}
 
@@ -93,63 +93,64 @@ func (r *SessionDeclineRule) Evaluate(ctx context.Context, sig signal.Signal) (b
 		}
 	}
 
-	trigger := rule.NewTrigger(r.ID(), sig.UserID(), "Session frequency declined", r.config.Priority)
-	trigger.Metadata["last_week_sessions"] = playerState.Sessions.LastWeek
-	trigger.Metadata["this_week_sessions"] = playerState.Sessions.ThisWeek
-	trigger.Metadata["time_since_reset"] = now.Sub(playerState.Sessions.LastReset).Hours()
+	// Get current and previous week for metadata
+	currentWeek := getYearWeek(now)
+	previousWeek := getYearWeek(now.Add(-7 * 24 * time.Hour))
 
-	logrus.Infof("session decline rule triggered for user %s: lastWeek=%d, thisWeek=%d",
-		sig.UserID(), playerState.Sessions.LastWeek, playerState.Sessions.ThisWeek)
+	trigger := rule.NewTrigger(r.ID(), sig.UserID(), "Session frequency declined", r.config.Priority)
+	trigger.Metadata["current_week"] = currentWeek
+	trigger.Metadata["previous_week"] = previousWeek
+	trigger.Metadata["current_week_sessions"] = sessionData.LoginCount[currentWeek]
+	trigger.Metadata["previous_week_sessions"] = sessionData.LoginCount[previousWeek]
+
+	logrus.Infof("session decline rule triggered for user %s: currentWeek=%s (%d), previousWeek=%s (%d)",
+		sig.UserID(), currentWeek, sessionData.LoginCount[currentWeek], previousWeek, sessionData.LoginCount[previousWeek])
 
 	return true, trigger, nil
 }
 
-// checkWeeklyReset checks if a weekly reset should occur and performs it if needed.
-// Returns true if a reset occurred, false otherwise.
-// NOTE: We only cache session counts - we don't maintain them as source of truth.
-func checkWeeklyReset(state *service.ChurnState, now time.Time) bool {
-	// Calculate time since last reset
-	timeSinceReset := now.Sub(state.Sessions.LastReset)
-
-	// Check if a week hasn't passed (7 days)
-	if timeSinceReset < 7*24*time.Hour {
-		return false
-	}
-
-	logrus.Infof("weekly reset triggered: %v since last reset", timeSinceReset)
-
-	// Move thisWeek to lastWeek
-	state.Sessions.LastWeek = state.Sessions.ThisWeek
-
-	// Reset thisWeek counter
-	state.Sessions.ThisWeek = 0
-
-	// Update last reset time
-	state.Sessions.LastReset = now
-
-	return true
+// getYearWeek returns the year-week string in format "YYYYWW" (e.g., "202610" for week 10 of 2026)
+func getYearWeek(t time.Time) string {
+	year, week := t.ISOWeek()
+	return fmt.Sprintf("%04d%02d", year, week)
 }
 
-// isChurning determines if a player is exhibiting churn behavior.
+// isChurning determines if a player is exhibiting churn behavior using map-based data.
 // A player is churning if:
-// - They had activity last week (LastWeek > 0)
-// - They have no activity this week (ThisWeek == 0)
-// - At least 7 days have passed since last reset
-func isChurning(state *service.ChurnState, now time.Time) bool {
-	timeSinceReset := now.Sub(state.Sessions.LastReset)
-
-	// Must be at least 7 days since reset to determine churn
-	if timeSinceReset < 7*24*time.Hour {
-		return false
+// - They had activity in a recent past week (within last 2 weeks)
+// - They have no activity in the current week (or very low activity)
+//
+// This approach handles multi-week absences naturally by checking the map for any recent activity.
+func isChurning(data *service.SessionTrackingData, now time.Time) bool {
+	if len(data.LoginCount) == 0 {
+		return false // No data, can't determine churn
 	}
 
-	// Was active last week but not this week
-	churning := state.Sessions.LastWeek > 0 && state.Sessions.ThisWeek == 0
+	currentWeek := getYearWeek(now)
+	previousWeek := getYearWeek(now.Add(-7 * 24 * time.Hour))
 
-	if churning {
-		logrus.Infof("player is churning: lastWeek=%d, thisWeek=%d, timeSinceReset=%v",
-			state.Sessions.LastWeek, state.Sessions.ThisWeek, timeSinceReset)
+	currentCount := data.LoginCount[currentWeek]
+	previousCount := data.LoginCount[previousWeek]
+
+	// Check if they had activity last week but not this week
+	if previousCount > 0 && currentCount == 0 {
+		logrus.Infof("player is churning: previousWeek=%s (%d), currentWeek=%s (%d)",
+			previousWeek, previousCount, currentWeek, currentCount)
+		return true
 	}
 
-	return churning
+	// Alternative: Check if they had activity in any recent week but none currently
+	// This handles multi-week absences where they might have been gone for 2+ weeks
+	if currentCount == 0 {
+		// Check if they had any activity in the past 2 weeks
+		for week, count := range data.LoginCount {
+			if week != currentWeek && count > 0 {
+				logrus.Infof("player is churning: had activity in week %s (%d), none in currentWeek=%s",
+					week, count, currentWeek)
+				return true
+			}
+		}
+	}
+
+	return false
 }

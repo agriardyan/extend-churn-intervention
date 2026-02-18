@@ -10,6 +10,7 @@ import (
 	"github.com/AccelByte/extends-anti-churn/pkg/pipeline"
 	"github.com/AccelByte/extends-anti-churn/pkg/rule"
 	ruleBuiltin "github.com/AccelByte/extends-anti-churn/pkg/rule/builtin"
+	"github.com/AccelByte/extends-anti-churn/pkg/service"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,14 +35,28 @@ import (
 // - Session decline → intervention
 // - Challenge completion → rewards
 // ============================================================
-func InitRuleEngine(pipelineConfig *pipeline.Config) (*rule.Engine, *rule.Registry, error) {
+func InitRuleEngine(
+	pipelineConfig *pipeline.Config,
+	loginSessionTracker service.LoginSessionTracker,
+) (*rule.Engine, *rule.Registry, error) {
+	// ============================================================
+	// DEVELOPER: Builtin rule dependencies
+	// ============================================================
+	// If your custom rules need external dependencies (e.g., services,
+	// external APIs), add them to the Dependencies struct in
+	// pkg/rule/builtin/init.go and pass them here.
+	// ============================================================
+	deps := &ruleBuiltin.Dependencies{
+		LoginSessionTracker: loginSessionTracker,
+	}
+
 	// ============================================================
 	// DEVELOPER: Builtin rule type registration
 	// ============================================================
 	// This registers all rule factories defined in pkg/rule/builtin/init.go
 	// To add new rule types, modify pkg/rule/builtin/init.go
 	// ============================================================
-	ruleBuiltin.RegisterRules()
+	ruleBuiltin.RegisterRules(deps)
 
 	// ============================================================
 	// DEVELOPER: Register custom rule types below

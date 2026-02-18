@@ -156,3 +156,6 @@ test-*
 
 example/*
 bin/*
+
+# Any files prefixed with `old`
+old.*

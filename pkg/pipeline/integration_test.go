@@ -17,7 +17,7 @@ import (
 )
 
 // setupTestProcessor creates a processor with builtin event processors registered
-func setupTestProcessor(stateStore service.StateStore) *signal.Processor {
+func setupTestProcessor(stateStore service.StateStore, loginSessionTracker service.LoginSessionTracker) *signal.Processor {
 	processor := signal.NewProcessor(stateStore, "test-namespace")
 
 	// Register builtin event processors
@@ -25,6 +25,9 @@ func setupTestProcessor(stateStore service.StateStore) *signal.Processor {
 		processor.GetEventProcessorRegistry(),
 		processor.GetStateStore(),
 		processor.GetNamespace(),
+		&signalBuiltin.EventProcessorDependencies{
+			LoginTrackingStore: loginSessionTracker,
+		},
 	)
 
 	return processor
@@ -46,10 +49,11 @@ func TestIntegration_PipelineWiring(t *testing.T) {
 	defer client.Close()
 
 	// Create state store
-	store := service.NewRedisStateStore(client, service.RedisStateStoreConfig{})
+	store := service.NewRedisChurnStateStore(client, service.RedisChurnStateStoreConfig{})
+	loginSessionTracker := service.NewRedisLoginSessionTrackingStore(client, service.RedisLoginSessionTrackingStoreConfig{})
 
 	// Create signal processor
-	processor := setupTestProcessor(store)
+	processor := setupTestProcessor(store, loginSessionTracker)
 
 	// Create rule registry
 	registry := rule.NewRegistry()
