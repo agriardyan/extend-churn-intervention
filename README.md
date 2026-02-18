@@ -7,8 +7,8 @@ A plugin-based event handler for the AccelByte Extends platform that detects pla
 This service listens to game events (OAuth logins, stat updates) via Kafka Connect, analyzes player behavior patterns, and triggers interventions (challenges, rewards) to re-engage at-risk players.
 
 **Example flows:**
-- Player loses 5 matches in a row → `losing_streak` signal → "Comeback Challenge" (win 3 matches in 7 days)
-- Player quits 3 times → `rage_quit` signal → "Comeback Challenge"
+- Player loses 5 matches in a row → `losing_streak` signal → "Comeback Challenge" (configured in Challenge Service, e.g. win 3 matches in 7 days)
+- Player shows behavior of rage quit → `rage_quit` signal → "Comeback Challenge"
 - Player's weekly logins drop to 0 (was active last week) → `session_decline` signal → Grant reward item + email notification
 
 ## Architecture
@@ -47,6 +47,7 @@ Game Events → Signal Detection → Rule Evaluation → Action Execution
 ### ❌ What This System SHOULD NOT Do
 
 This system is **read-only** for game state. It REACTS to events, it does NOT maintain primary game state.
+An exception may be made, e.g. when using extends-challenge-service, because extends-challenge-service needs stat update to trigger the challenge.
 
 ```yaml
 # ❌ WRONG: Updating game stats (game server owns this)
