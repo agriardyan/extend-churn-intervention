@@ -2,6 +2,14 @@
 
 A plugin-based event handler for the AccelByte Extends platform that detects player churn signals and triggers automated interventions.
 
+## Why is This?
+
+**Player churn poses a significant threat to game success, particularly for newly launched titles.** When players become frustrated (e.g. from losing streaks, feeling stuck, or losing momentum) they may quit and never return. First impressions matter: early-stage player retention typically determines long-term success, with players who disengage in their first sessions being substantially less likely to return.
+
+**Traditional analytics pipelines may respond too slowly for effective intervention.** Batch-processed analytics systems often operate on daily or longer cycles, creating delays between when a player experiences frustration and when that signal becomes actionable. This latency can mean the difference between successfully re-engaging a player and losing them permanently. Especially in moments of acute frustration like consecutive losses or other gameplay obstacles.
+
+**This system enables near real-time detection and intervention.** By processing player events as they occur (logins, match results, stat updates), the system can identify potential churn signals within seconds and trigger automated interventions (e.g. granting rewards, creating comeback challenges, or offering personalized incentives), all while players are still engaged with the game, increasing the opportunity for successful re-engagement.
+
 ## What is This?
 
 This service listens to game events (OAuth logins, stat updates) via Kafka Connect, analyzes player behavior patterns, and triggers interventions (challenges, rewards) to re-engage at-risk players.
@@ -46,8 +54,9 @@ Game Events → Signal Detection → Rule Evaluation → Action Execution
 
 ### ❌ What This System SHOULD NOT Do
 
-This system is **read-only** for game state. It REACTS to events, it does NOT maintain primary game state.
-An exception may be made, e.g. when using extends-challenge-service, because extends-challenge-service needs stat update to trigger the challenge.
+This system is supposed to be **read-only** for game state. It REACTS to events, it does store its own historical data and churning state but NOT maintain primary game state.
+
+An exception about the read-only may be made, e.g. when using extends-challenge-service, because extends-challenge-service needs stat update to trigger the challenge.
 
 ```yaml
 # ❌ WRONG: Updating game stats (game server owns this)
