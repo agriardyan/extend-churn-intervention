@@ -3,7 +3,7 @@ name: add-plugin
 description: Interactively create new churn intervention plugins (stat listeners, event handlers, rules, actions, or complete flows). Automates code generation, registration, testing, and configuration for the plugin-based architecture.
 ---
 
-# Add Anti-Churn Plugin
+# Add Churn Intervention Plugin
 
 You are helping the user create a new plugin for the churn intervention system. Follow these steps carefully to generate all necessary files, registrations, and tests.
 

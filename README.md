@@ -82,15 +82,15 @@ An exception about the read-only may be made, e.g. when using extends-challenge-
 
 ### Ownership Boundaries
 
-| Component | Owner | Anti-Churn Role |
+| Component | Owner | Churn Intervention Role |
 |-----------|-------|----------------|
 | Game stats (`rse-match-wins`, `rse-current-losing-streak`, `rse-rage-quit`) | Game Server | **Read Only** - Listen to events |
 | Challenge progress tracking | Challenge System | **Read Only** - Listen to completion events |
 | Player sessions, login/logout | IAM Service | **Read Only** - Listen to OAuth events |
-| Churn detection logic | **Anti-Churn** | **Owns** - Implement rules |
-| Intervention execution | **Anti-Churn** | **Owns** - Create challenges, grant rewards |
-| Intervention history & cooldowns | **Anti-Churn** | **Owns** - Track what we did |
-| Weekly login counts | **Anti-Churn** | **Owns** - `session_tracking:*` Redis keys |
+| Churn detection logic | **Churn Intervention** | **Owns** - Implement rules |
+| Intervention execution | **Churn Intervention** | **Owns** - Create challenges, grant rewards |
+| Intervention history & cooldowns | **Churn Intervention** | **Owns** - Track what we did |
+| Weekly login counts | **Churn Intervention** | **Owns** - `session_tracking:*` Redis keys |
 
 **Golden Rule**: If another system already owns it, we LISTEN to it, we don't UPDATE it.
 

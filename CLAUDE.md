@@ -77,10 +77,10 @@ func (a *ComebackChallengeAction) Execute() error {
 | Game stats (`rse-*`) | Game Server | **Read Only** - Listen to events |
 | Challenge progress | Challenge System | **Read Only** - Listen to completion |
 | OAuth/Sessions | IAM Service | **Read Only** - Listen to login events |
-| Churn detection rules | **Anti-Churn** | **Own** - Implement detection logic |
-| Intervention actions | **Anti-Churn** | **Own** - Create challenges, grant rewards |
-| Intervention history | **Anti-Churn** | **Own** - Track cooldowns, history |
-| Session login counts | **Anti-Churn** | **Own** - Track weekly login counts in `session_tracking:*` Redis keys |
+| Churn detection rules | **Churn Intervention** | **Own** - Implement detection logic |
+| Intervention actions | **Churn Intervention** | **Own** - Create challenges, grant rewards |
+| Intervention history | **Churn Intervention** | **Own** - Track cooldowns, history |
+| Session login counts | **Churn Intervention** | **Own** - Track weekly login counts in `session_tracking:*` Redis keys |
 
 **Golden Rule**: If another system already owns it, we LISTEN to it, we don't UPDATE it.
 

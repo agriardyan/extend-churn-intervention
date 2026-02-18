@@ -1,4 +1,4 @@
-# Anti-Churn Pipeline Configuration
+# Churn Intervention Pipeline Configuration
 # This file defines the rules and actions for the churn intervention system.
 
 # Rules detect churn signals and trigger actions
