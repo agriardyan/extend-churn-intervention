@@ -52,6 +52,9 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Copy config/pipeline.yaml for embedding into the binary
+COPY config/pipeline.yaml config/pipeline.yaml
+
 # Copy application code
 COPY . .
 
@@ -78,6 +81,7 @@ WORKDIR /app
 
 # Copy build
 COPY --from=builder /output/extend-churn-intervention /app/main
+COPY --from=builder /build/config/pipeline.yaml /app/config/pipeline.yaml
 
 # Plugin Arch gRPC Server Port.
 EXPOSE 6565
