@@ -15,9 +15,6 @@ const (
 	RageQuitThreshold         = 3
 	LosingStreakThreshold     = 5
 
-	// Environment variable keys for reward item
-	EnvSpeedBoosterItemID = "SPEED_BOOSTER_ITEM_ID"
-
 	// Default item ID (fallback if env var not set)
 	DefaultSpeedBoosterItemID = "speed_booster"
 )
