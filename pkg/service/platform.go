@@ -9,6 +9,7 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/platform"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/social"
 	"github.com/AccelByte/accelbyte-go-sdk/social-sdk/pkg/socialclient/user_statistic"
+	"github.com/AccelByte/accelbyte-go-sdk/social-sdk/pkg/socialclientmodels"
 )
 
 type EntitlementService struct {
@@ -92,6 +93,9 @@ func (s *StatisticService) UpdateStatComebackChallenge(ctx context.Context, user
 		Namespace: namespace,
 		UserID:    userID,
 		StatCode:  statCode,
+		Body: &socialclientmodels.StatItemInc{
+			Inc: 1,
+		},
 	}
 
 	_, err := statisticsService.IncUserStatItemValueShort(input)

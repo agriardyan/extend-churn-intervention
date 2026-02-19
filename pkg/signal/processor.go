@@ -74,11 +74,15 @@ func (p *Processor) ProcessStatEvent(ctx context.Context, event *statistic.StatI
 	}
 
 	userID := event.GetUserId()
-	statCode := payload.GetStatCode()
-
 	if userID == "" {
-		return nil, fmt.Errorf("user ID is empty in stat event")
+		if payload.GetUserId() == "" {
+			return nil, fmt.Errorf("user ID is empty in stat event")
+		}
+
+		userID = payload.GetUserId()
 	}
+
+	statCode := payload.GetStatCode()
 	if statCode == "" {
 		return nil, fmt.Errorf("stat code is empty in stat event")
 	}
