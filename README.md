@@ -94,13 +94,52 @@ An exception about the read-only may be made, e.g. when using extends-challenge-
 
 **Golden Rule**: If another system already owns it, we LISTEN to it, we don't UPDATE it.
 
+## Dependencies
+
+### AccelByte Gaming Services (AGS)
+
+This service runs on top of [AccelByte Gaming Services (AGS)](https://accelbyte.io). The following AGS features must be enabled in your namespace:
+
+| AGS Feature | Used For |
+|-------------|---------|
+| **IAM** | OAuth event streaming — detecting player logins |
+| **Statistics** | Stat update events — detecting losing streaks, rage quits, match wins |
+| **Platform / Entitlements** | Granting reward items via the `grant-item` action |
+
+### Extend Apps Required for Comeback Challenges
+
+The `dispatch-comeback-challenge` action requires two additional Extend apps to be deployed in your AccelByte Admin Portal. Without them, the action will record an intervention but players won't be able to receive, see or complete a challenge.
+
+| Extend App | Repository | Purpose |
+|------------|-----------|---------|
+| **Extend Challenge Service** | [extend-challenge-service](https://github.com/AccelByte/extend-challenge-service) | Stores challenge definitions and player progress. Provides REST/gRPC APIs so players can query active challenges and claim rewards upon completion. |
+| **Extend Challenge Event Handler** | [extend-challenge-event-handler](https://github.com/AccelByte/extend-challenge-event-handler) | Listens to real-time stat update events from AGS and automatically advances player progress toward challenge goals. Marks goals complete when targets are reached. |
+
+**End-to-end flow with all three services:**
+
+```
+Churn Intervention          Extend Challenge Service    Extend Challenge Event Handler
+        │                           │                               │
+        │  1. detect churn signal   │                               │
+        │  2. dispatch challenge ──►│                               │
+        │     (create challenge)    │                               │
+        │                           │                  3. player earns wins
+        │                           │◄─── (stat events) ────────────┤
+        │                           │     (updates progress)        │
+        │                           │     (completes goal)          │
+        │                           │                               │
+        │                  4. player claims reward                   │
+        │                     (entitlement granted via AGS)         │
+```
+
 ## Getting Started
 
 ### Prerequisites
 
 - Go 1.23+
 - Docker (for Redis and proto generation)
-- AccelByte account with namespace configured
+- AccelByte namespace with IAM, Statistics, and Platform features enabled
+- (For comeback challenges) [extend-challenge-service](https://github.com/AccelByte/extend-challenge-service) and [extend-challenge-event-handler](https://github.com/AccelByte/extend-challenge-event-handler) deployed as Extend apps
 
 ### Quick Start
 
@@ -171,7 +210,7 @@ The `session_decline` rule uses a map-based weekly tracking approach:
 
 | Action ID | Type | Description |
 |-----------|------|-------------|
-| `dispatch-comeback-challenge` | `dispatch_comeback_challenge` | Creates a time-limited challenge (win N matches in X days) |
+| `dispatch-comeback-challenge` | `dispatch_comeback_challenge` | Creates a time-limited comeback challenge (win N matches in X days). **Requires** [extend-challenge-service](https://github.com/AccelByte/extend-challenge-service) and [extend-challenge-event-handler](https://github.com/AccelByte/extend-challenge-event-handler) to be deployed. |
 | `grant-item` | `grant_item` | Grants an item/entitlement via AccelByte platform (configurable via `REWARD_ITEM_ID` env var) |
 | `send-email-notification-after-granting-item` | `send_email_notification_after_granting_item` | No-op stub — extend to send real email notifications |
 
