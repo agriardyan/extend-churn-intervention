@@ -12,7 +12,7 @@ A plugin-based event handler for the AccelByte Extends platform that detects pla
 
 ## What is This?
 
-This service listens to game events (OAuth logins, stat updates) via Kafka Connect, analyzes player behavior patterns, and triggers interventions (challenges, rewards) to re-engage at-risk players.
+This service listens to game events (OAuth logins, stat updates) via Kafka Connect, analyzes player behavior patterns, and triggers interventions (challenges, rewards) to re-engage at-risk players. In this codebase, we provide three built-in churn detection rules (losing streaks, rage quits, session decline) and several intervention actions (dispatching comeback challenges, granting items, sending notifications). The system is designed to be easily extensible with new rules and actions.
 
 **Example flows:**
 - Player loses 5 matches in a row → `losing_streak` signal → "Comeback Challenge" (configured in Challenge Service, e.g. win 3 matches in 7 days)
@@ -61,6 +61,22 @@ Everything else is a judgement call. The guidance below reflects sensible defaul
 - Grant reward items via AccelByte entitlements
 - Trigger notifications
 - Record intervention history with cooldown management
+
+### Sensible Default: Think in Terms of Ownership
+
+A useful starting point when designing a plugin is to ask who **owns** a given piece of data. The table below reflects the default ownership model for a typical AGS game setup. Components you own, you can freely read and write. Components owned by other systems, you should generally only listen to — though writing is sometimes necessary (see the circular dependency rule below).
+
+| Component | Owner | Default Role |
+|-----------|-------|--------------|
+| Game stats (`rse-match-wins`, `rse-current-losing-streak`, `rse-rage-quit`) | Game Server | **Listen** — react to stat events |
+| Challenge progress tracking | Challenge System | **Listen** — react to completion events |
+| Player sessions, login/logout | IAM Service | **Listen** — react to OAuth events |
+| Churn detection logic | **Churn Intervention** | **Own** — implement rules |
+| Intervention execution | **Churn Intervention** | **Own** — create challenges, grant rewards |
+| Intervention history & cooldowns | **Churn Intervention** | **Own** — track what we did |
+| Weekly login counts | **Churn Intervention** | **Own** — `session_tracking:*` Redis keys |
+
+This table is a design aid, not an enforcement. Deviating is fine when you have a good reason (e.g., writing a stat specifically to trigger an Extend Challenge flow). The key question is always: *does writing this data create a circular event loop?*
 
 ### The One Rule: Avoid Circular Dependencies
 
@@ -189,15 +205,6 @@ Supports `${ENV_VAR:default}` substitution in parameter values.
 | `losing-streak` | `losing_streak` | `losing_streak` | Triggers when consecutive losses reach threshold (default: 5) |
 | `session-decline` | `session_decline` | `login` | Triggers when player had activity in a past week but none this week (4-week detection window) |
 
-### Session Decline Detection
-
-The `session_decline` rule uses a map-based weekly tracking approach:
-
-- On every login, a weekly count is incremented in Redis (`session_tracking:{userID}` Hash key)
-- Weeks are keyed as `YYYYWW` (ISO week format, e.g., `"202610"`)
-- Data is retained for 4 weeks — handles gradual churn and multi-week absences
-- A player is considered churning if they had activity in any tracked week but have none in the current week
-
 ## Built-in Actions
 
 | Action ID | Type | Description |
@@ -314,7 +321,7 @@ make build
 The service requires the following environment variables (see `.env.template`):
 - `AB_BASE_URL`, `AB_CLIENT_ID`, `AB_CLIENT_SECRET`, `AB_NAMESPACE` — AccelByte credentials
 - `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` — Redis connection
-- `REWARD_ITEM_ID` — Item ID to grant (default: `COMEBACK_REWARD`)
+- `REWARD_ITEM_ID` — Item ID to grant. See Store's Item at AccelByte AGS Admin Portal to find out the item ID.
 
 ## Monitoring
 
