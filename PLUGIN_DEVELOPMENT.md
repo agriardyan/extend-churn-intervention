@@ -33,6 +33,17 @@ This guide explains how to extend the churn intervention system with custom plug
 
 **Technology stack:** Go 1.23 · AccelByte AGS (gRPC AsyncAPI) · Redis · YAML config · miniredis for testing
 
+### Framework Philosophy
+
+This framework is **non-opinionated** about what plugins do internally. Rules may call external services. Actions may write to external systems, including game stats (e.g., writing a stat to trigger a challenge in Extend Challenge Service is a valid pattern). You decide what's appropriate for your use case.
+
+**The only constraint is: avoid circular event loops.**
+
+```
+❌ Rule listens to event X → Action writes X → triggers event X again → infinite loop
+✅ Rule listens to event X → Action writes to a different system
+```
+
 ---
 
 ## Architecture Overview
@@ -142,11 +153,11 @@ Rules are **pattern detectors** that evaluate signals and decide whether to trig
 - ✅ Pattern matching against signal data
 - ✅ Cooldown guards (don't re-trigger during active interventions)
 - ✅ Priority assignment for trigger ordering
+- ✅ External service calls for data enrichment, when needed lazily after a threshold check passes (see below)
 
-**What does NOT belong in a rule:**
-- ❌ Side effects — no API calls, no database writes (exception may apply, see **Option 2: Lazy load inside the rule**)
-- ❌ State mutations (exception may apply, see **Option 2: Lazy load inside the rule**)
-- ❌ Heavy computation that should be pre-calculated
+**Prefer to avoid in a rule:**
+- ⚠️ Unconditional external API calls on every signal — prefer lazy loading after a quick check
+- ⚠️ State mutations — those belong in actions where rollback support exists
 
 **When to create a new rule:** When you want to detect a new churn pattern, or apply different thresholds to an existing pattern.
 
@@ -210,13 +221,13 @@ Actions are the **stateful executors** — they're where side effects happen.
 
 **What belongs in an action:**
 - ✅ External API calls (grant items, create challenges, send notifications)
-- ✅ Database writes
+- ✅ Writes to external systems, including game stats when an integration requires it (e.g., a stat write to trigger an Extend Challenge)
 - ✅ Error handling and retry logic
 
 **What does NOT belong in an action:**
 - ❌ Rule evaluation logic or pattern detection
 - ❌ Conditional business logic that decides *whether* to act (that's the rule's job)
-- ❌ Signal creation or processing
+- ❌ Writes that feed back into the same event the rule is listening to (circular loop)
 
 **When to create a new action:** When you need a new type of intervention or integration with a new external system.
 

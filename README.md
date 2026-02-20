@@ -37,62 +37,54 @@ Game Events → Signal Detection → Rule Evaluation → Action Execution
 - **Action**: Intervention to execute (e.g., create challenge, grant reward)
 - **Pipeline**: Orchestrates the full flow with configurable rule-to-action mappings in `config/pipeline.yaml`
 
-## 🎯 Architectural Boundaries
+## 🎯 Design Philosophy
 
-### ✅ What This System SHOULD Do
+This framework is intentionally **non-opinionated** about what you do inside your plugins. Rules may call external services (for lazy data enrichment), and actions may write to external systems — including updating game stats when an integration requires it (e.g., triggering a challenge in Extend Challenge Service via a stat write).
 
-**Detection** — Identify churn risk signals:
+**The one pattern to avoid is circular event loops:**
+
+```
+❌ Listen to event X → action updates X → triggers event X again → infinite loop
+```
+
+Everything else is a judgement call. The guidance below reflects sensible defaults for most churn intervention use cases, not hard restrictions.
+
+### What This System Is Designed For
+
+**Detection** — Identify churn risk signals, for example:
 - Session decline patterns (weekly login count drops)
 - Losing streaks and rage quits
 - Other behavioral indicators of player disengagement
 
-**Intervention** — Execute retention strategies:
+**Intervention** — Execute retention strategies, for example:
 - Create time-limited comeback challenges
 - Grant reward items via AccelByte entitlements
-- Trigger email notifications
+- Trigger notifications
 - Record intervention history with cooldown management
 
-### ❌ What This System SHOULD NOT Do
+### The One Rule: Avoid Circular Dependencies
 
-This system is supposed to be **read-only** for game state. It REACTS to events, it does store its own historical data and churning state but NOT maintain primary game state.
-
-An exception about the read-only may be made, e.g. when using extends-challenge-service, because extends-challenge-service needs stat update to trigger the challenge.
+The only firm guideline is to not create loops where your action feeds back into the same event your rule is listening to:
 
 ```yaml
-# ❌ WRONG: Updating game stats (game server owns this)
+# ❌ CIRCULAR: listens to rse-match-wins → action updates rse-match-wins
+#    This triggers itself endlessly.
 - id: record-wins
+  type: match_win          # listens to rse-match-wins stat
   actions: [update-match-wins-stat]
 
-# ❌ WRONG: Managing challenge progress (challenge system owns this)
-- id: track-challenge
-  actions: [increment-challenge-progress]
-```
-
-```yaml
-# ✅ CORRECT: Detect churn and intervene
+# ✅ FINE: listens to rse-match-wins → dispatches a challenge
+#    Writing to the challenge system does not re-emit rse-match-wins.
 - id: losing-streak
   type: losing_streak
   actions: [dispatch-comeback-challenge]
 
-# ✅ CORRECT: Session decline → reward + notify
+# ✅ FINE: action writes a stat to trigger an Extend Challenge
+#    Acceptable when the written stat is different from the listened stat.
 - id: session-decline
   type: session_decline
   actions: [grant-item, send-email-notification-after-granting-item]
 ```
-
-### Ownership Boundaries
-
-| Component | Owner | Churn Intervention Role |
-|-----------|-------|----------------|
-| Game stats (`rse-match-wins`, `rse-current-losing-streak`, `rse-rage-quit`) | Game Server | **Read Only** - Listen to events |
-| Challenge progress tracking | Challenge System | **Read Only** - Listen to completion events |
-| Player sessions, login/logout | IAM Service | **Read Only** - Listen to OAuth events |
-| Churn detection logic | **Churn Intervention** | **Owns** - Implement rules |
-| Intervention execution | **Churn Intervention** | **Owns** - Create challenges, grant rewards |
-| Intervention history & cooldowns | **Churn Intervention** | **Owns** - Track what we did |
-| Weekly login counts | **Churn Intervention** | **Owns** - `session_tracking:*` Redis keys |
-
-**Golden Rule**: If another system already owns it, we LISTEN to it, we don't UPDATE it.
 
 ## Dependencies
 

@@ -82,7 +82,9 @@ func (a *ComebackChallengeAction) Execute() error {
 | Intervention history | **Churn Intervention** | **Own** - Track cooldowns, history |
 | Session login counts | **Churn Intervention** | **Own** - Track weekly login counts in `session_tracking:*` Redis keys |
 
-**Golden Rule**: If another system already owns it, we LISTEN to it, we don't UPDATE it.
+**Framework philosophy**: This framework is non-opinionated about what plugins do internally. Rules may call external services (lazy enrichment). Actions may write to external systems including game stats, when an integration requires it (e.g., writing a stat to trigger an Extend Challenge).
+
+**The one firm constraint: avoid circular event loops.** If a rule listens to event X and an action writes back to X, that creates an infinite loop. Everything else is a judgement call.
 
 ### Implementation Checklist
 
@@ -90,10 +92,9 @@ Before implementing a new rule or action, ask:
 
 1. ✅ **Is this churn DETECTION?** (analyzing signals to identify at-risk players)
 2. ✅ **Is this INTERVENTION?** (creating challenges, granting rewards to re-engage)
-3. ❌ **Am I updating state owned by another system?** (game stats, challenge progress)
-4. ❌ **Does this create a circular dependency?** (listening to event → updating same event source)
+3. ⚠️ **Does this create a circular loop?** (rule listens to event X → action writes X → triggers event X again)
 
-If you answered YES to questions 3 or 4, **STOP** and reconsider the approach.
+If question 3 is YES, **STOP** and reconsider. Otherwise, use your judgment.
 
 ## Common Commands
 
