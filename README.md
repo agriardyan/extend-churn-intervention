@@ -17,7 +17,62 @@ This service listens to game events (OAuth logins, stat updates) via Kafka Conne
 **Example flows:**
 - Player loses 5 matches in a row → `losing_streak` signal → "Comeback Challenge" (configured in Challenge Service, e.g. win 3 matches in 7 days)
 - Player shows behavior of rage quit → `rage_quit` signal → "Comeback Challenge"
-- Player's weekly logins drop to 0 (was active last week) → `session_decline` signal → Grant reward item + email notification
+- Player's weekly logins drop to 0 (was active last week) → `session_decline` signal → Grant reward item + send email notification
+
+## Use Cases
+
+### You Should Use This If:
+
+- **You need real-time churn intervention** — Your game requires immediate responses to player frustration (seconds/minutes, not hours/days)
+- **You have event streams available** — Your game emits player events (logins, match results, stat updates) via AccelByte AGS
+- **You want automated retention** — You want to trigger interventions (challenges, rewards, notifications) without manual oversight
+- **You're on AccelByte Gaming Services** — This service is built specifically for the AccelByte Extends platform
+
+**Common scenarios:**
+- Competitive games where losing streaks cause immediate disengagement
+- New game launches where first-session retention is critical
+- Live ops teams wanting to A/B test different intervention strategies
+- Games with comeback mechanics that need automatic activation
+
+### What Can This Tool Actually Do?
+
+**Detection capabilities:**
+- Track login patterns and detect when players stop coming back
+- Count consecutive match losses in real-time
+- Identify rage quit behavior (quit immediately after losing)
+- Monitor any stat-based behavioral patterns you configure
+
+**Intervention capabilities (out-of-the-box):**
+- **Create time-limited challenges** — "Win 3 matches in the next 7 days to earn rewards" (requires [fork of extend-challenge-service](https://github.com/agriardyan/extend-challenge-service))
+- **Grant in-game items/currency** — Automatically give players entitlements via AccelByte Platform
+- **Send notifications** — Email integration stub included (extend with your email provider)
+- **Track intervention history** — Built-in cooldown system prevents spamming the same player
+
+**Concrete example:**
+```
+Player "Sarah123" loses 5 matches in a row
+  ↓
+System detects losing_streak signal within 2 seconds
+  ↓
+Checks: Has Sarah received a comeback challenge in the last 7 days? (No)
+  ↓
+Creates challenge: "Win 3 matches in 7 days → Get 500 gems"
+  ↓
+Sarah sees the challenge in-game (via extend-challenge-service)
+  ↓
+Sarah wins 3 matches → Challenge auto-completes → 500 gems granted
+```
+
+**Another example:**
+```
+Player "Mike456" was active 2 weeks ago but hasn't logged in this week
+  ↓
+System detects session_decline signal
+  ↓
+Grants comeback reward: 1000 gold coins (immediate)
+  ↓
+Sends email: "We miss you! Here's 1000 gold to welcome you back"
+```
 
 ## Architecture
 
