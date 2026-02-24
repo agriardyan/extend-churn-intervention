@@ -17,7 +17,62 @@ This service listens to game events (OAuth logins, stat updates) via Kafka Conne
 **Example flows:**
 - Player loses 5 matches in a row → `losing_streak` signal → "Comeback Challenge" (configured in Challenge Service, e.g. win 3 matches in 7 days)
 - Player shows behavior of rage quit → `rage_quit` signal → "Comeback Challenge"
-- Player's weekly logins drop to 0 (was active last week) → `session_decline` signal → Grant reward item + email notification
+- Player's weekly logins drop to 0 (was active last week) → `session_decline` signal → Grant reward item + send email notification
+
+## Use Cases
+
+### You Should Use This If:
+
+- **You need real-time churn intervention** — Your game requires immediate responses to player frustration (seconds/minutes, not hours/days)
+- **You have event streams available** — Your game emits player events (logins, match results, stat updates) via AccelByte AGS
+- **You want automated retention** — You want to trigger interventions (challenges, rewards, notifications) without manual oversight
+- **You're on AccelByte Gaming Services** — This service is built specifically for the AccelByte Extends platform
+
+**Common scenarios:**
+- Competitive games where losing streaks cause immediate disengagement
+- New game launches where first-session retention is critical
+- Live ops teams wanting to A/B test different intervention strategies
+- Games with comeback mechanics that need automatic activation
+
+### What Can This Tool Actually Do?
+
+**Detection capabilities:**
+- Track login patterns and detect when players stop coming back
+- Count consecutive match losses in real-time
+- Identify rage quit behavior (quit immediately after losing)
+- Monitor any stat-based behavioral patterns you configure
+
+**Intervention capabilities (out-of-the-box):**
+- **Create time-limited challenges** — "Win 3 matches in the next 7 days to earn rewards" (requires [fork of extend-challenge-service](https://github.com/agriardyan/extend-challenge-service))
+- **Grant in-game items/currency** — Automatically give players entitlements via AccelByte Platform
+- **Send notifications** — Email integration stub included (extend with your email provider)
+- **Track intervention history** — Built-in cooldown system prevents spamming the same player
+
+**Concrete example:**
+```
+Player "Sarah123" loses 5 matches in a row
+  ↓
+System detects losing_streak signal within 2 seconds
+  ↓
+Checks: Has Sarah received a comeback challenge in the last 7 days? (No)
+  ↓
+Creates challenge: "Win 3 matches in 7 days → Get 500 gems"
+  ↓
+Sarah sees the challenge in-game (via extend-challenge-service)
+  ↓
+Sarah wins 3 matches → Challenge auto-completes → 500 gems granted
+```
+
+**Another example:**
+```
+Player "Mike456" was active 2 weeks ago but hasn't logged in this week
+  ↓
+System detects session_decline signal
+  ↓
+Grants comeback reward: 1000 gold coins (immediate)
+  ↓
+Sends email: "We miss you! Here's 1000 gold to welcome you back"
+```
 
 ## Architecture
 
@@ -120,7 +175,7 @@ The `dispatch-comeback-challenge` action requires two additional Extend apps to 
 
 | Extend App | Repository | Purpose |
 |------------|-----------|---------|
-| **Extend Challenge Service** | [extend-challenge-service](https://github.com/AccelByte/extend-challenge-service) | Stores challenge definitions and player progress. Provides REST/gRPC APIs so players can query active challenges and claim rewards upon completion. |
+| **Extend Challenge Service** | [Fork of extend-challenge-service](https://github.com/agriardyan/extend-challenge-service) | Stores challenge definitions, assign challenges, and player progress. Provides REST/gRPC APIs so players can query active challenges and claim rewards upon completion. |
 | **Extend Challenge Event Handler** | [extend-challenge-event-handler](https://github.com/AccelByte/extend-challenge-event-handler) | Listens to real-time stat update events from AGS and automatically advances player progress toward challenge goals. Marks goals complete when targets are reached. |
 
 **End-to-end flow with all three services:**
@@ -209,7 +264,7 @@ Supports `${ENV_VAR:default}` substitution in parameter values.
 
 | Action ID | Type | Description |
 |-----------|------|-------------|
-| `dispatch-comeback-challenge` | `dispatch_comeback_challenge` | Creates a time-limited comeback challenge (win N matches in X days). **Requires** [extend-challenge-service](https://github.com/AccelByte/extend-challenge-service) and [extend-challenge-event-handler](https://github.com/AccelByte/extend-challenge-event-handler) to be deployed. |
+| `dispatch-comeback-challenge` | `dispatch_comeback_challenge` | Creates a time-limited comeback challenge (win N matches in X days). **Requires** [Fork of extend-challenge-service](https://github.com/agriardyan/extend-challenge-service) and [extend-challenge-event-handler](https://github.com/AccelByte/extend-challenge-event-handler) to be deployed. |
 | `grant-item` | `grant_item` | Grants an item/entitlement via AccelByte platform (configurable via `REWARD_ITEM_ID` env var) |
 | `send-email-notification-after-granting-item` | `send_email_notification_after_granting_item` | No-op stub — extend to send real email notifications |
 
@@ -268,20 +323,40 @@ rules:
 .
 ├── config/
 │   └── pipeline.yaml              # Rules and actions configuration
+├── internal/
+│   ├── app/                       # Application setup and run logic
+│   ├── bootstrap/                 # Service initialization (actions, rules, signals, pipeline)
+│   ├── config/                    # Configuration loading and management
+│   └── server/                    # gRPC server, metrics, and telemetry setup
 ├── pkg/
 │   ├── action/                    # Intervention execution framework
-│   │   └── builtin/               # grant_item, dispatch_comeback_challenge, send_email
+│   │   ├── action.go              # Core Action interface
+│   │   ├── executor.go            # Action execution logic with cooldown management
+│   │   ├── factory.go             # Action factory for creating instances from config
+│   │   ├── registry.go            # Action type registration
+│   │   └── builtin/               # Built-in actions: grant_item, dispatch_comeback_challenge, send_email
+│   ├── common/                    # Logging, env helpers, OpenTelemetry
 │   ├── handler/                   # gRPC event handlers (OAuth, stat updates)
+│   ├── pb/                        # Generated protobuf code for AccelByte events
 │   ├── pipeline/                  # Pipeline orchestration and startup validation
+│   ├── proto/                     # Protobuf definitions for AccelByte events
 │   ├── rule/                      # Churn detection rule framework
-│   │   └── builtin/               # rage_quit, losing_streak, session_decline
+│   │   ├── rule.go                # Core Rule interface
+│   │   ├── engine.go              # Rule evaluation engine
+│   │   ├── factory.go             # Rule factory for creating instances from config
+│   │   ├── registry.go            # Rule type registration
+│   │   └── builtin/               # Built-in rules: rage_quit, losing_streak, session_decline
 │   ├── service/                   # Service abstractions and state models
 │   │   ├── churn_state.go         # ChurnState, InterventionRecord, CooldownState
 │   │   ├── login_session_tracker.go  # Weekly session tracking (Redis Hash)
-│   │   └── interfaces.go          # StateStore, LoginSessionTracker, EntitlementGranter
-│   ├── signal/                    # Event normalization framework
-│   │   └── builtin/               # OAuth, rage_quit, losing_streak event processors
-│   └── common/                    # Logging, env helpers, OpenTelemetry
+│   │   ├── interfaces.go          # StateStore, LoginSessionTracker, EntitlementGranter
+│   │   ├── platform.go            # AccelByte platform integration
+│   │   └── models.go              # Data models and types
+│   └── signal/                    # Event normalization framework
+│       ├── signal.go              # Core Signal interface
+│       ├── processor.go           # Signal processing logic
+│       ├── event_processor.go     # EventProcessor interface for event-to-signal conversion
+│       └── builtin/               # Built-in event processors and signals: OAuth, rage_quit, losing_streak
 ├── .claude/
 │   └── skills/
 │       └── add-plugin/            # /add-plugin Claude Code skill
